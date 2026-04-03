@@ -418,7 +418,7 @@ function renderRoleUI() {
   elements.toggleFormButton.disabled = !adminMode;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
   elements.roleNote.textContent = adminMode
-    ? `Admin mode is active. You can add new transactions or edit existing rows. Display currency: ${state.selectedCurrency}.`
+    ? `Admin mode is active. You can add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.`
     : `Viewer mode is active. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
@@ -456,14 +456,24 @@ function renderTransactions(transactions) {
             <div class="${transaction.type === "income" ? "amount-positive" : "amount-negative"}">
               ${transaction.type === "income" ? "+" : "-"}${formatCurrency(transaction.amount)}
             </div>
-            <div>
+            <div class="row-actions">
               <button
                 type="button"
                 class="table-action"
+                data-action="edit"
                 data-id="${transaction.id}"
                 ${state.selectedRole !== "admin" ? "disabled" : ""}
               >
                 Edit
+              </button>
+              <button
+                type="button"
+                class="table-action danger-action"
+                data-action="delete"
+                data-id="${transaction.id}"
+                ${state.selectedRole !== "admin" ? "disabled" : ""}
+              >
+                Delete
               </button>
             </div>
           </article>
@@ -473,7 +483,15 @@ function renderTransactions(transactions) {
   `;
 
   elements.transactionsTable.querySelectorAll(".table-action").forEach((button) => {
-    button.addEventListener("click", () => startEdit(Number(button.dataset.id)));
+    button.addEventListener("click", () => {
+      const transactionId = Number(button.dataset.id);
+      if (button.dataset.action === "delete") {
+        removeTransaction(transactionId);
+        return;
+      }
+
+      startEdit(transactionId);
+    });
   });
 }
 
@@ -506,6 +524,25 @@ function closeForm() {
   state.formOpen = false;
   state.editingId = null;
   elements.transactionForm.reset();
+}
+
+function removeTransaction(transactionId) {
+  if (state.selectedRole !== "admin") return;
+
+  const transaction = state.transactions.find((item) => item.id === transactionId);
+  if (!transaction) return;
+
+  const confirmed = window.confirm(`Delete "${transaction.description}" from ${formatDate(transaction.date)}?`);
+  if (!confirmed) return;
+
+  state.transactions = state.transactions.filter((item) => item.id !== transactionId);
+
+  if (state.editingId === transactionId) {
+    closeForm();
+  }
+
+  persistState();
+  render();
 }
 
 function getFilteredTransactions() {

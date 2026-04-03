@@ -7,7 +7,7 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - Overview cards for total balance, income, and expenses
 - Time-based balance trend visualization built with SVG
 - Categorical spending breakdown with a donut chart and legend
-- Transactions table with search, filtering, and sorting
+- Transactions table with search, filtering, sorting, editing, and deletion in admin mode
 - Currency switcher for viewing the dashboard in `USD`, `INR`, `EUR`, or `GBP`
 - Simulated role-based UI:
   - `Viewer` can inspect the dashboard and transactions

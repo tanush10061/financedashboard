@@ -388,6 +388,11 @@ input:focus {
   color: var(--text-dark);
 }
 
+.danger-action {
+  background: rgba(214, 93, 69, 0.14);
+  color: var(--warn);
+}
+
 .primary-button:hover,
 .ghost-button:hover,
 .table-action:hover {
@@ -449,6 +454,12 @@ input:focus {
 .transactions-table {
   display: grid;
   gap: 10px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .table-head,
