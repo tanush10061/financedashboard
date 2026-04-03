@@ -1,0 +1,10 @@
+{
+  "name": "pulseledger-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static finance dashboard website for frontend evaluation.",
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "start": "python3 -m http.server 4173"
+  }
+}
