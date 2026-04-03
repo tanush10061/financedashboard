@@ -1,4 +1,10 @@
 const STORAGE_KEY = "pulse-ledger-state-v1";
+const currencyConfig = {
+  USD: { locale: "en-US", code: "USD", rate: 1 },
+  INR: { locale: "en-IN", code: "INR", rate: 83.45 },
+  EUR: { locale: "de-DE", code: "EUR", rate: 0.92 },
+  GBP: { locale: "en-GB", code: "GBP", rate: 0.79 },
+};
 
 const categories = [
   "Housing",
@@ -39,6 +45,7 @@ const state = loadState();
 
 const elements = {
   roleSelect: document.querySelector("#roleSelect"),
+  currencySelect: document.querySelector("#currencySelect"),
   resetDataButton: document.querySelector("#resetDataButton"),
   summaryCards: document.querySelector("#summaryCards"),
   summaryMonthLabel: document.querySelector("#summaryMonthLabel"),
@@ -71,6 +78,7 @@ function loadState() {
   if (!saved) {
     return {
       selectedRole: "viewer",
+      selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
@@ -82,6 +90,7 @@ function loadState() {
     const parsed = JSON.parse(saved);
     return {
       selectedRole: parsed.selectedRole || "viewer",
+      selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
       editingId: null,
       filters: {
@@ -95,6 +104,7 @@ function loadState() {
   } catch (error) {
     return {
       selectedRole: "viewer",
+      selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
@@ -108,6 +118,7 @@ function persistState() {
     STORAGE_KEY,
     JSON.stringify({
       selectedRole: state.selectedRole,
+      selectedCurrency: state.selectedCurrency,
       filters: state.filters,
       transactions: state.transactions,
     }),
@@ -135,10 +146,17 @@ function attachEvents() {
     render();
   });
 
+  elements.currencySelect.addEventListener("change", (event) => {
+    state.selectedCurrency = event.target.value;
+    persistState();
+    render();
+  });
+
   elements.resetDataButton.addEventListener("click", () => {
     state.transactions = [...initialTransactions];
     state.filters = { search: "", type: "all", category: "all", sort: "date-desc" };
     state.selectedRole = "viewer";
+    state.selectedCurrency = "USD";
     closeForm();
     persistState();
     render();
@@ -217,6 +235,7 @@ function attachEvents() {
 
 function render() {
   elements.roleSelect.value = state.selectedRole;
+  elements.currencySelect.value = state.selectedCurrency;
   elements.searchInput.value = state.filters.search;
   elements.typeFilter.value = state.filters.type;
   elements.categoryFilter.value = state.filters.category;
@@ -316,7 +335,7 @@ function renderTrendChart(points) {
     </svg>
     <div class="chart-caption">
       <strong>${formatCurrency(points[points.length - 1].balance)}</strong>
-      <span>Ending balance across the latest timeline.</span>
+      <span>Ending balance across the latest timeline in ${state.selectedCurrency}.</span>
     </div>
   `;
 }
@@ -399,8 +418,8 @@ function renderRoleUI() {
   elements.toggleFormButton.disabled = !adminMode;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
   elements.roleNote.textContent = adminMode
-    ? "Admin mode is active. You can add new transactions or edit existing rows."
-    : "Viewer mode is active. Data remains visible, but editing is disabled.";
+    ? `Admin mode is active. You can add new transactions or edit existing rows. Display currency: ${state.selectedCurrency}.`
+    : `Viewer mode is active. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
 }
@@ -629,20 +648,27 @@ function getMonthlyLabel(transactions) {
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
+  const config = currencyConfig[state.selectedCurrency] || currencyConfig.USD;
+  return new Intl.NumberFormat(config.locale, {
     style: "currency",
-    currency: "USD",
+    currency: config.code,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(convertAmount(value));
 }
 
 function formatCompactCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
+  const config = currencyConfig[state.selectedCurrency] || currencyConfig.USD;
+  return new Intl.NumberFormat(config.locale, {
     style: "currency",
-    currency: "USD",
+    currency: config.code,
     notation: "compact",
     maximumFractionDigits: 1,
-  }).format(value);
+  }).format(convertAmount(value));
+}
+
+function convertAmount(value) {
+  const config = currencyConfig[state.selectedCurrency] || currencyConfig.USD;
+  return value * config.rate;
 }
 
 function formatDate(value) {
