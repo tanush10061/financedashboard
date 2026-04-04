@@ -695,12 +695,14 @@ function normalizeImportedTransaction(row) {
     row.description || row.title || row.merchant || row.name || row.note || row.details || row.party || "",
   ).trim();
   const dateValue = String(row.date || row.transaction_date || row.created_at || row.time || "").trim();
-  const amountValue = Number.parseFloat(
+  const rawAmountValue = Number.parseFloat(
     String(row.amount || row.amount_inr || row.value || row.total || row.money || row.debit || row.credit || "0").replace(/[^0-9.-]/g, ""),
   );
   const typeValue = String(row.type || row.transaction_type || row.kind || "").trim().toLowerCase();
   const categoryValue = String(row.category || row.group || row.label || inferCategory(description, typeValue)).trim();
   const normalizedDate = normalizeDate(dateValue);
+  const sourceCurrency = inferSourceCurrency(row);
+  const amountValue = convertToBaseCurrency(rawAmountValue, sourceCurrency);
 
   if (!description || !normalizedDate || Number.isNaN(amountValue) || amountValue === 0) {
     return null;
@@ -742,6 +744,18 @@ function normalizeDate(value) {
 
   if (!yyyy) return "";
   return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+}
+
+function inferSourceCurrency(row) {
+  const explicitCurrency = String(row.currency || row.currency_code || "").trim().toUpperCase();
+  if (currencyConfig[explicitCurrency]) return explicitCurrency;
+  if (row.amount_inr) return "INR";
+  return "USD";
+}
+
+function convertToBaseCurrency(value, sourceCurrency) {
+  const config = currencyConfig[sourceCurrency] || currencyConfig.USD;
+  return value / config.rate;
 }
 
 function inferCategory(description, typeValue) {
