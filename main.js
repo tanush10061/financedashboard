@@ -66,6 +66,7 @@ const elements = {
   activityFeed: document.querySelector("#activityFeed"),
   importFileInput: document.querySelector("#importFileInput"),
   importStatus: document.querySelector("#importStatus"),
+  removeImportButton: document.querySelector("#removeImportButton"),
   toggleFormButton: document.querySelector("#toggleFormButton"),
   transactionForm: document.querySelector("#transactionForm"),
   cancelFormButton: document.querySelector("#cancelFormButton"),
@@ -95,6 +96,8 @@ function loadState() {
       selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
+      lastImportedIds: [],
+      lastImportedFileName: "",
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
       transactions: initialTransactions,
     };
@@ -107,6 +110,8 @@ function loadState() {
       selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
       editingId: null,
+      lastImportedIds: Array.isArray(parsed.lastImportedIds) ? parsed.lastImportedIds : [],
+      lastImportedFileName: parsed.lastImportedFileName || "",
       filters: {
         search: parsed.filters?.search || "",
         type: parsed.filters?.type || "all",
@@ -121,6 +126,8 @@ function loadState() {
       selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
+      lastImportedIds: [],
+      lastImportedFileName: "",
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
       transactions: initialTransactions,
     };
@@ -133,6 +140,8 @@ function persistState() {
     JSON.stringify({
       selectedRole: state.selectedRole,
       selectedCurrency: state.selectedCurrency,
+      lastImportedIds: state.lastImportedIds,
+      lastImportedFileName: state.lastImportedFileName,
       filters: state.filters,
       transactions: state.transactions,
     }),
@@ -171,6 +180,8 @@ function attachEvents() {
     state.filters = { search: "", type: "all", category: "all", sort: "date-desc" };
     state.selectedRole = "viewer";
     state.selectedCurrency = "USD";
+    state.lastImportedIds = [];
+    state.lastImportedFileName = "";
     closeForm();
     persistState();
     render();
@@ -182,6 +193,10 @@ function attachEvents() {
 
     await importTransactionsFromFile(file);
     elements.importFileInput.value = "";
+  });
+
+  elements.removeImportButton.addEventListener("click", () => {
+    removeImportedBatch();
   });
 
   elements.toggleFormButton.addEventListener("click", () => {
@@ -505,9 +520,10 @@ function renderRoleUI() {
   const adminMode = state.selectedRole === "admin";
   elements.toggleFormButton.disabled = !adminMode;
   elements.importFileInput.disabled = !adminMode;
+  elements.removeImportButton.disabled = !adminMode || !state.lastImportedIds.length;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
   elements.roleNote.textContent = adminMode
-    ? `Admin mode is active. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.`
+    ? `Admin mode is active. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.${state.lastImportedFileName ? ` Last imported file: ${state.lastImportedFileName}.` : ""}`
     : `Viewer mode is active. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
@@ -631,6 +647,8 @@ async function importTransactionsFromFile(file) {
       return;
     }
 
+    state.lastImportedIds = normalized.map((transaction) => transaction.id);
+    state.lastImportedFileName = file.name;
     state.transactions = [...normalized, ...state.transactions];
     persistState();
     render();
@@ -777,6 +795,31 @@ function inferCategory(description, typeValue) {
 function setImportStatus(message, tone) {
   elements.importStatus.textContent = message;
   elements.importStatus.className = `import-status ${tone}`;
+}
+
+function removeImportedBatch() {
+  if (state.selectedRole !== "admin" || !state.lastImportedIds.length) {
+    setImportStatus("There is no imported file batch to remove.", "error");
+    return;
+  }
+
+  const fileName = state.lastImportedFileName || "the last imported file";
+  const confirmed = window.confirm(`Remove all transactions imported from ${fileName}?`);
+  if (!confirmed) return;
+
+  const importedIdSet = new Set(state.lastImportedIds);
+  state.transactions = state.transactions.filter((transaction) => !importedIdSet.has(transaction.id));
+
+  if (state.editingId && importedIdSet.has(state.editingId)) {
+    closeForm();
+  }
+
+  const removedCount = state.lastImportedIds.length;
+  state.lastImportedIds = [];
+  state.lastImportedFileName = "";
+  persistState();
+  render();
+  setImportStatus(`Removed ${removedCount} imported transaction${removedCount === 1 ? "" : "s"} from ${fileName}.`, "success");
 }
 
 function removeTransaction(transactionId) {
