@@ -8,13 +8,14 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - Operating metrics for savings rate, average expense, latest income, and activity depth
 - Time-based balance trend visualization built with SVG
 - Categorical spending breakdown with a donut chart and legend
-- Budget tracking section with category-level progress
+- Budget tracking section with user-defined category-level progress
 - Recent activity feed for the latest transactions
 - Transactions table with search, filtering, sorting, editing, and deletion in admin mode
 - CSV/JSON import flow for transaction exports, with manual editing still available after import
 - Currency switcher for viewing the dashboard in `USD`, `INR`, `EUR`, or `GBP`
 - Account entry screen where users create a profile with username and email before entering the dashboard
 - Multi-user local experience so different users can switch accounts and keep separate transaction data in `localStorage`
+- Per-user budget setup so each account can define and update its own monthly category limits
 - Simulated role-based UI:
   - `Viewer` can inspect the dashboard and transactions
   - `Admin` can add, edit, delete, import, and remove imported transactions

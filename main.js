@@ -5,15 +5,6 @@ const currencyConfig = {
   EUR: { locale: "de-DE", code: "EUR", rate: 0.92 },
   GBP: { locale: "en-GB", code: "GBP", rate: 0.79 },
 };
-const categoryBudgets = {
-  Housing: 1800,
-  Food: 550,
-  Transport: 220,
-  Utilities: 240,
-  Entertainment: 180,
-  Health: 140,
-  Savings: 500,
-};
 
 const categories = [
   "Housing",
@@ -27,6 +18,7 @@ const categories = [
   "Savings",
   "Other",
 ];
+const budgetCategories = ["Housing", "Food", "Transport", "Utilities", "Entertainment", "Health", "Savings"];
 
 const initialTransactions = [
   { id: 1, date: "2026-02-03", description: "Monthly salary", amount: 5100, category: "Salary", type: "income" },
@@ -60,6 +52,7 @@ function createUserProfile(name, email, transactions = initialTransactions) {
     name,
     email,
     transactions: cloneTransactions(transactions),
+    budgets: {},
     lastImportedIds: [],
     lastImportedFileName: "",
   };
@@ -90,6 +83,10 @@ const elements = {
   trendChart: document.querySelector("#trendChart"),
   categoryChart: document.querySelector("#categoryChart"),
   insightsList: document.querySelector("#insightsList"),
+  toggleBudgetButton: document.querySelector("#toggleBudgetButton"),
+  budgetForm: document.querySelector("#budgetForm"),
+  budgetInputs: document.querySelector("#budgetInputs"),
+  cancelBudgetButton: document.querySelector("#cancelBudgetButton"),
   budgetStatus: document.querySelector("#budgetStatus"),
   activityFeed: document.querySelector("#activityFeed"),
   importFileInput: document.querySelector("#importFileInput"),
@@ -128,6 +125,7 @@ function loadState() {
           name: "Demo User",
           email: "demo@pulseledger.app",
           transactions: cloneTransactions(initialTransactions),
+          budgets: {},
           lastImportedIds: [],
           lastImportedFileName: "",
         },
@@ -135,6 +133,7 @@ function loadState() {
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
+      budgetFormOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
     };
@@ -148,6 +147,7 @@ function loadState() {
           name: user.name || `User ${index + 1}`,
           email: user.email || `user${index + 1}@pulseledger.app`,
           transactions: Array.isArray(user.transactions) ? user.transactions : cloneTransactions(initialTransactions),
+          budgets: sanitizeBudgets(user.budgets),
           lastImportedIds: Array.isArray(user.lastImportedIds) ? user.lastImportedIds : [],
           lastImportedFileName: user.lastImportedFileName || "",
         }))
@@ -157,6 +157,7 @@ function loadState() {
             name: "Demo User",
             email: "demo@pulseledger.app",
             transactions: Array.isArray(parsed.transactions) && parsed.transactions.length ? parsed.transactions : cloneTransactions(initialTransactions),
+            budgets: sanitizeBudgets(parsed.budgets),
             lastImportedIds: Array.isArray(parsed.lastImportedIds) ? parsed.lastImportedIds : [],
             lastImportedFileName: parsed.lastImportedFileName || "",
           },
@@ -169,6 +170,7 @@ function loadState() {
       selectedRole: parsed.selectedRole || "viewer",
       selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
+      budgetFormOpen: false,
       editingId: null,
       filters: {
         search: parsed.filters?.search || "",
@@ -187,6 +189,7 @@ function loadState() {
           name: "Demo User",
           email: "demo@pulseledger.app",
           transactions: cloneTransactions(initialTransactions),
+          budgets: {},
           lastImportedIds: [],
           lastImportedFileName: "",
         },
@@ -194,6 +197,7 @@ function loadState() {
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
+      budgetFormOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
     };
@@ -224,6 +228,14 @@ function getActiveTransactions() {
 
 function setActiveTransactions(transactions) {
   getActiveUser().transactions = transactions;
+}
+
+function getActiveBudgets() {
+  return getActiveUser().budgets || {};
+}
+
+function setActiveBudgets(budgets) {
+  getActiveUser().budgets = budgets;
 }
 
 function getLastImportedIds() {
@@ -260,6 +272,7 @@ function attachEvents() {
     state.currentUserId = event.target.value;
     state.editingId = null;
     state.formOpen = false;
+    state.budgetFormOpen = false;
     persistState();
     render();
   });
@@ -290,6 +303,7 @@ function attachEvents() {
     state.isAuthenticated = true;
     state.editingId = null;
     state.formOpen = false;
+    state.budgetFormOpen = false;
     elements.userNameInput.value = "";
     elements.userEmailInput.value = "";
     persistState();
@@ -307,6 +321,7 @@ function attachEvents() {
     state.isAuthenticated = true;
     state.editingId = null;
     state.formOpen = false;
+    state.budgetFormOpen = false;
     persistState();
     render();
   });
@@ -315,6 +330,7 @@ function attachEvents() {
     state.isAuthenticated = false;
     state.editingId = null;
     state.formOpen = false;
+    state.budgetFormOpen = false;
     persistState();
     render();
     setAuthStatus("Signed out. Create an account or continue with an existing one.", "success");
@@ -325,6 +341,7 @@ function attachEvents() {
 
     if (state.selectedRole === "viewer") {
       closeForm();
+      closeBudgetForm();
     }
 
     persistState();
@@ -344,6 +361,7 @@ function attachEvents() {
     state.selectedCurrency = "USD";
     clearLastImportedBatch();
     closeForm();
+    closeBudgetForm();
     persistState();
     render();
   });
@@ -375,6 +393,52 @@ function attachEvents() {
   elements.cancelFormButton.addEventListener("click", () => {
     closeForm();
     render();
+  });
+
+  elements.toggleBudgetButton.addEventListener("click", () => {
+    if (state.selectedRole !== "admin") return;
+
+    if (state.budgetFormOpen) {
+      closeBudgetForm();
+    } else {
+      openBudgetForm();
+    }
+
+    render();
+  });
+
+  elements.cancelBudgetButton.addEventListener("click", () => {
+    closeBudgetForm();
+    render();
+  });
+
+  elements.budgetForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    if (state.selectedRole !== "admin") return;
+
+    const nextBudgets = {};
+    budgetCategories.forEach((category) => {
+      const input = elements.budgetInputs.querySelector(`[data-budget-category="${category}"]`);
+      const rawValue = input?.value.trim() || "";
+      if (!rawValue) return;
+
+      const amount = Number(rawValue);
+      if (Number.isFinite(amount) && amount > 0) {
+        nextBudgets[category] = convertToBaseCurrency(amount, state.selectedCurrency);
+      }
+    });
+
+    setActiveBudgets(nextBudgets);
+    closeBudgetForm();
+    persistState();
+    render();
+    setImportStatus(
+      Object.keys(nextBudgets).length
+        ? "Budgets saved for the active user."
+        : "All budgets were cleared for the active user.",
+      "success",
+    );
   });
 
   elements.transactionForm.addEventListener("submit", (event) => {
@@ -465,7 +529,7 @@ function render() {
   renderTrendChart(getTrendData(transactions));
   renderCategoryChart(getCategoryTotals(transactions));
   renderInsights(getInsights(transactions));
-  renderBudgetStatus(getBudgetStatus(transactions));
+  renderBudgetStatus(getBudgetStatus(transactions, getActiveBudgets()));
   renderActivityFeed(getRecentActivity(transactions));
   renderRoleUI();
   renderTransactions(filteredTransactions);
@@ -646,7 +710,12 @@ function renderInsights(insights) {
 
 function renderBudgetStatus(items) {
   if (!items.length) {
-    elements.budgetStatus.innerHTML = renderEmptyState("No budget data yet", "Expense categories will show budget progress here.");
+    elements.budgetStatus.innerHTML = renderEmptyState(
+      "No budgets set yet",
+      state.selectedRole === "admin"
+        ? "Use Set budgets to create category targets for this user."
+        : "Switch to admin mode to create category budgets for this user.",
+    );
     return;
   }
 
@@ -697,14 +766,33 @@ function renderRoleUI() {
   const activeUser = getActiveUser();
   const adminMode = state.selectedRole === "admin";
   elements.toggleFormButton.disabled = !adminMode;
+  elements.toggleBudgetButton.disabled = !adminMode;
   elements.importFileInput.disabled = !adminMode;
   elements.removeImportButton.disabled = !adminMode || !getLastImportedIds().length;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
+  elements.toggleBudgetButton.textContent = state.budgetFormOpen ? "Hide budgets" : "Set budgets";
   elements.roleNote.textContent = adminMode
     ? `Admin mode is active for ${activeUser.name}. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.${getLastImportedFileName() ? ` Last imported file: ${getLastImportedFileName()}.` : ""}`
     : `Viewer mode is active for ${activeUser.name}. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
+  elements.budgetForm.classList.toggle("hidden", !adminMode || !state.budgetFormOpen);
+  elements.budgetInputs.innerHTML = budgetCategories
+    .map((category) => `
+      <label>
+        <span>${category}</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          inputmode="decimal"
+          data-budget-category="${category}"
+          placeholder="No budget"
+          value="${formatBudgetInputValue(getActiveBudgets()[category])}"
+        />
+      </label>
+    `)
+    .join("");
 }
 
 function renderTransactions(transactions) {
@@ -807,6 +895,14 @@ function closeForm() {
   state.formOpen = false;
   state.editingId = null;
   elements.transactionForm.reset();
+}
+
+function openBudgetForm() {
+  state.budgetFormOpen = true;
+}
+
+function closeBudgetForm() {
+  state.budgetFormOpen = false;
 }
 
 async function importTransactionsFromFile(file) {
@@ -1172,7 +1268,12 @@ function getInsights(transactions) {
   ];
 }
 
-function getBudgetStatus(transactions) {
+function getBudgetStatus(transactions, budgets) {
+  const configuredBudgets = Object.entries(budgets || {}).filter(([, budget]) => Number.isFinite(budget) && budget > 0);
+  if (!configuredBudgets.length) {
+    return [];
+  }
+
   const totals = transactions
     .filter((transaction) => transaction.type === "expense")
     .reduce((accumulator, transaction) => {
@@ -1180,7 +1281,7 @@ function getBudgetStatus(transactions) {
       return accumulator;
     }, {});
 
-  return Object.entries(categoryBudgets).map(([category, budget]) => {
+  return configuredBudgets.map(([category, budget]) => {
     const spent = totals[category] || 0;
     const progress = budget ? Math.round((spent / budget) * 100) : 0;
     const remaining = budget - spent;
@@ -1274,6 +1375,14 @@ function convertAmount(value) {
   return value * config.rate;
 }
 
+function formatBudgetInputValue(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+
+  return Number(convertAmount(value).toFixed(2)).toString();
+}
+
 function formatDate(value) {
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",
@@ -1300,4 +1409,18 @@ function renderEmptyState(title, detail) {
       <span>${detail}</span>
     </div>
   `;
+}
+
+function sanitizeBudgets(budgets) {
+  if (!budgets || typeof budgets !== "object") {
+    return {};
+  }
+
+  return budgetCategories.reduce((accumulator, category) => {
+    const value = Number(budgets[category]);
+    if (Number.isFinite(value) && value > 0) {
+      accumulator[category] = value;
+    }
+    return accumulator;
+  }, {});
 }

@@ -166,7 +166,24 @@
               <p class="panel-kicker">Planning</p>
               <h2 id="budgetHeading">Budget tracking</h2>
             </div>
+            <div class="transactions-actions">
+              <button id="toggleBudgetButton" class="ghost-button" type="button">
+                Set budgets
+              </button>
+            </div>
           </div>
+          <form id="budgetForm" class="transaction-form hidden">
+            <div class="budget-form-copy">
+              Add monthly category budgets for the active user. Leave a field blank to remove that budget.
+            </div>
+            <div id="budgetInputs" class="form-grid"></div>
+            <div class="form-actions">
+              <button type="submit" class="primary-button">Save budgets</button>
+              <button type="button" id="cancelBudgetButton" class="ghost-button">
+                Cancel
+              </button>
+            </div>
+          </form>
           <div id="budgetStatus" class="budget-list"></div>
         </section>
 

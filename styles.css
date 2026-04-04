@@ -463,6 +463,12 @@ input:focus {
   gap: 14px;
 }
 
+.budget-form-copy {
+  margin-bottom: 16px;
+  color: rgba(248, 244, 237, 0.78);
+  line-height: 1.5;
+}
+
 .budget-item,
 .activity-item {
   padding: 16px 18px;
