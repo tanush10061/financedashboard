@@ -692,14 +692,14 @@ function splitCsvLine(line) {
 
 function normalizeImportedTransaction(row) {
   const description = String(
-    row.description || row.title || row.merchant || row.name || row.note || row.details || "",
+    row.description || row.title || row.merchant || row.name || row.note || row.details || row.party || "",
   ).trim();
   const dateValue = String(row.date || row.transaction_date || row.created_at || row.time || "").trim();
   const amountValue = Number.parseFloat(
-    String(row.amount || row.value || row.total || row.money || "0").replace(/[^0-9.-]/g, ""),
+    String(row.amount || row.amount_inr || row.value || row.total || row.money || row.debit || row.credit || "0").replace(/[^0-9.-]/g, ""),
   );
   const typeValue = String(row.type || row.transaction_type || row.kind || "").trim().toLowerCase();
-  const categoryValue = String(row.category || row.group || row.label || "Other").trim();
+  const categoryValue = String(row.category || row.group || row.label || inferCategory(description, typeValue)).trim();
   const normalizedDate = normalizeDate(dateValue);
 
   if (!description || !normalizedDate || Number.isNaN(amountValue) || amountValue === 0) {
@@ -742,6 +742,22 @@ function normalizeDate(value) {
 
   if (!yyyy) return "";
   return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+}
+
+function inferCategory(description, typeValue) {
+  const text = `${description} ${typeValue}`.toLowerCase();
+
+  if (/salary|payroll|stipend/.test(text)) return "Salary";
+  if (/freelance|client|retainer|consulting/.test(text)) return "Freelance";
+  if (/zomato|swiggy|restaurant|cafe|coffee|canteen|food|grocery/.test(text)) return "Food";
+  if (/uber|ola|metro|train|bus|transport|fuel|petrol/.test(text)) return "Transport";
+  if (/rent|housing|apartment|landlord/.test(text)) return "Housing";
+  if (/electric|water|utility|wifi|internet|recharge/.test(text)) return "Utilities";
+  if (/pharmacy|hospital|clinic|health|medical/.test(text)) return "Health";
+  if (/movie|netflix|spotify|entertainment|bookmyshow|game/.test(text)) return "Entertainment";
+  if (/saving|investment|mutual|fund/.test(text)) return "Savings";
+
+  return "Other";
 }
 
 function setImportStatus(message, tone) {
