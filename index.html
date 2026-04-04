@@ -13,7 +13,50 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="page-shell">
+    <section id="authScreen" class="auth-shell">
+      <div class="auth-card">
+        <p class="eyebrow auth-eyebrow">Welcome to PulseLedger</p>
+        <h1>Create your account</h1>
+        <p class="auth-text">
+          Enter your username and email to start your personal finance workspace.
+        </p>
+
+        <form id="authCreateForm">
+          <div class="auth-form-grid">
+            <label>
+              <span>Username</span>
+              <input id="userNameInput" type="text" placeholder="Aarav Singh" required />
+            </label>
+            <label>
+              <span>Email</span>
+              <input id="userEmailInput" type="email" placeholder="aarav@example.com" required />
+            </label>
+          </div>
+
+          <button id="addUserButton" class="primary-button auth-button" type="submit">
+            Create account
+          </button>
+        </form>
+
+        <div class="auth-divider">
+          <span>or continue with an existing user</span>
+        </div>
+
+        <div class="auth-existing">
+          <label>
+            <span>Existing account</span>
+            <select id="existingUserSelect" aria-label="Select existing user"></select>
+          </label>
+          <button id="continueUserButton" class="ghost-button" type="button">
+            Continue to dashboard
+          </button>
+        </div>
+
+        <div id="authStatus" class="import-status hidden" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <div id="dashboardApp" class="page-shell hidden">
       <header class="hero">
         <div class="hero-copy">
           <p class="eyebrow">Personal finance command center</p>
@@ -34,18 +77,9 @@
               <span>Switch user</span>
               <select id="userSelect" aria-label="Select user"></select>
             </label>
-            <div class="user-form-grid">
-              <label>
-                <span>Username</span>
-                <input id="userNameInput" type="text" placeholder="Aarav Singh" />
-              </label>
-              <label>
-                <span>Email</span>
-                <input id="userEmailInput" type="email" placeholder="aarav@example.com" />
-              </label>
-            </div>
-            <button id="addUserButton" class="ghost-button" type="button">
-              Add user
+            <div class="user-meta" id="activeUserEmail">demo@pulseledger.app</div>
+            <button id="signOutButton" class="ghost-button" type="button">
+              Sign out
             </button>
           </div>
 

@@ -68,11 +68,19 @@ function createUserProfile(name, email, transactions = initialTransactions) {
 const state = loadState();
 
 const elements = {
+  authScreen: document.querySelector("#authScreen"),
+  dashboardApp: document.querySelector("#dashboardApp"),
+  authCreateForm: document.querySelector("#authCreateForm"),
+  existingUserSelect: document.querySelector("#existingUserSelect"),
+  continueUserButton: document.querySelector("#continueUserButton"),
+  authStatus: document.querySelector("#authStatus"),
   userSelect: document.querySelector("#userSelect"),
   userNameInput: document.querySelector("#userNameInput"),
   userEmailInput: document.querySelector("#userEmailInput"),
   addUserButton: document.querySelector("#addUserButton"),
   activeUserLabel: document.querySelector("#activeUserLabel"),
+  activeUserEmail: document.querySelector("#activeUserEmail"),
+  signOutButton: document.querySelector("#signOutButton"),
   roleSelect: document.querySelector("#roleSelect"),
   currencySelect: document.querySelector("#currencySelect"),
   resetDataButton: document.querySelector("#resetDataButton"),
@@ -112,6 +120,7 @@ function loadState() {
 
   if (!saved) {
     return {
+      isAuthenticated: false,
       currentUserId: "demo-user",
       users: [
         {
@@ -154,6 +163,7 @@ function loadState() {
         ];
 
     return {
+      isAuthenticated: Boolean(parsed.isAuthenticated && migratedUsers.some((user) => user.id === parsed.currentUserId)),
       currentUserId: migratedUsers.some((user) => user.id === parsed.currentUserId) ? parsed.currentUserId : migratedUsers[0].id,
       users: migratedUsers,
       selectedRole: parsed.selectedRole || "viewer",
@@ -169,6 +179,7 @@ function loadState() {
     };
   } catch (error) {
     return {
+      isAuthenticated: false,
       currentUserId: "demo-user",
       users: [
         {
@@ -194,6 +205,7 @@ function persistState() {
     STORAGE_KEY,
     JSON.stringify({
       currentUserId: state.currentUserId,
+      isAuthenticated: state.isAuthenticated,
       users: state.users,
       selectedRole: state.selectedRole,
       selectedCurrency: state.selectedCurrency,
@@ -252,30 +264,60 @@ function attachEvents() {
     render();
   });
 
-  elements.addUserButton.addEventListener("click", () => {
+  elements.authCreateForm.addEventListener("submit", (event) => {
+    event.preventDefault();
     const name = elements.userNameInput.value.trim();
     const email = elements.userEmailInput.value.trim().toLowerCase();
 
     if (!name || !email) {
-      setImportStatus("Enter both a username and email to add a user.", "error");
+      setAuthStatus("Enter both a username and email to create an account.", "error");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setAuthStatus("Enter a valid email address to create the account.", "error");
       return;
     }
 
     if (state.users.some((user) => user.email.toLowerCase() === email)) {
-      setImportStatus("That email already exists. Switch to the existing user instead.", "error");
+      setAuthStatus("That email already exists. Use the existing account option below.", "error");
       return;
     }
 
     const user = createUserProfile(name, email, []);
     state.users.push(user);
     state.currentUserId = user.id;
+    state.isAuthenticated = true;
     state.editingId = null;
     state.formOpen = false;
     elements.userNameInput.value = "";
     elements.userEmailInput.value = "";
     persistState();
     render();
-    setImportStatus(`Created user ${name}. They now have their own separate dashboard data.`, "success");
+  });
+
+  elements.continueUserButton.addEventListener("click", () => {
+    const userId = elements.existingUserSelect.value;
+    if (!userId) {
+      setAuthStatus("Select an existing account to continue.", "error");
+      return;
+    }
+
+    state.currentUserId = userId;
+    state.isAuthenticated = true;
+    state.editingId = null;
+    state.formOpen = false;
+    persistState();
+    render();
+  });
+
+  elements.signOutButton.addEventListener("click", () => {
+    state.isAuthenticated = false;
+    state.editingId = null;
+    state.formOpen = false;
+    persistState();
+    render();
+    setAuthStatus("Signed out. Create an account or continue with an existing one.", "success");
   });
 
   elements.roleSelect.addEventListener("change", (event) => {
@@ -394,11 +436,18 @@ function render() {
   const activeUser = getActiveUser();
   const transactions = getActiveTransactions();
 
+  elements.existingUserSelect.innerHTML = state.users
+    .map((user) => `<option value="${user.id}">${user.name} (${user.email})</option>`)
+    .join("");
   elements.userSelect.innerHTML = state.users
     .map((user) => `<option value="${user.id}">${user.name} (${user.email})</option>`)
     .join("");
+  elements.existingUserSelect.value = activeUser.id;
   elements.userSelect.value = activeUser.id;
   elements.activeUserLabel.textContent = activeUser.name;
+  elements.activeUserEmail.textContent = activeUser.email;
+  elements.authScreen.classList.toggle("hidden", state.isAuthenticated);
+  elements.dashboardApp.classList.toggle("hidden", !state.isAuthenticated);
   elements.roleSelect.value = state.selectedRole;
   elements.currencySelect.value = state.selectedCurrency;
   elements.searchInput.value = state.filters.search;
@@ -921,8 +970,25 @@ function inferCategory(description, typeValue) {
 }
 
 function setImportStatus(message, tone) {
+  if (!message) {
+    elements.importStatus.textContent = "";
+    elements.importStatus.className = "import-status hidden";
+    return;
+  }
+
   elements.importStatus.textContent = message;
   elements.importStatus.className = `import-status ${tone}`;
+}
+
+function setAuthStatus(message, tone) {
+  if (!message) {
+    elements.authStatus.textContent = "";
+    elements.authStatus.className = "import-status hidden";
+    return;
+  }
+
+  elements.authStatus.textContent = message;
+  elements.authStatus.className = `import-status ${tone}`;
 }
 
 function removeImportedBatch() {

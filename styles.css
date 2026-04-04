@@ -39,6 +39,62 @@ select {
   padding: 32px 0 48px;
 }
 
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(560px, 100%);
+  padding: 32px;
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(18, 30, 27, 0.96), rgba(17, 54, 48, 0.92)),
+    var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 0.98;
+  font-family: "Instrument Serif", serif;
+  font-weight: 400;
+}
+
+.auth-text {
+  margin: 16px 0 0;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.auth-form-grid,
+.auth-existing {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.auth-divider {
+  margin: 24px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(248, 244, 237, 0.7);
+  font-size: 0.9rem;
+}
+
+.auth-button {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.auth-shell label span {
+  color: rgba(248, 244, 237, 0.78);
+}
+
 .hero {
   display: flex;
   justify-content: space-between;
@@ -137,6 +193,11 @@ select {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+}
+
+.user-meta {
+  color: rgba(248, 244, 237, 0.76);
+  font-size: 0.9rem;
 }
 
 .control-card span,

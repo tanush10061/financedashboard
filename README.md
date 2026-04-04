@@ -13,9 +13,11 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - Transactions table with search, filtering, sorting, editing, and deletion in admin mode
 - CSV/JSON import flow for transaction exports, with manual editing still available after import
 - Currency switcher for viewing the dashboard in `USD`, `INR`, `EUR`, or `GBP`
+- Account entry screen where users create a profile with username and email before entering the dashboard
+- Multi-user local experience so different users can switch accounts and keep separate transaction data in `localStorage`
 - Simulated role-based UI:
   - `Viewer` can inspect the dashboard and transactions
-  - `Admin` can add and edit transactions
+  - `Admin` can add, edit, delete, import, and remove imported transactions
 - Insight cards for highest spending category, comparison trend, and savings signal
 - Responsive layout and graceful empty states
 - Data reset action for quick demo recovery
@@ -25,6 +27,7 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - `index.html` contains the dashboard shell
 - `styles.css` contains the full visual system and responsive rules
 - `main.js` manages state, rendering, filtering, charts, and role-based behavior
+- The app opens on an account screen first, then unlocks the dashboard after account creation or existing-user selection
 
 ## How to run locally
 
@@ -102,10 +105,12 @@ I kept the implementation intentionally lightweight and review-friendly:
 - Simple state container in `main.js`
 - Derived dashboard insights computed from transaction data
 - `localStorage` used to persist the selected role, filters, and edited transactions
+- User profiles, imported batches, and active session state are also persisted in `localStorage`
 
 ## Notes for evaluation
 
 - The UI is designed to make the role switch obvious during review
+- Reviewers land on a lightweight account-creation screen first, which demonstrates the multi-user flow before the dashboard opens
 - Empty states appear when filters remove all transactions or when chart data is unavailable
 - The layout is optimized for desktop, tablet, and mobile screen sizes
 - Sample data is included so the dashboard feels complete on first load
