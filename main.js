@@ -64,6 +64,8 @@ const elements = {
   insightsList: document.querySelector("#insightsList"),
   budgetStatus: document.querySelector("#budgetStatus"),
   activityFeed: document.querySelector("#activityFeed"),
+  importFileInput: document.querySelector("#importFileInput"),
+  importStatus: document.querySelector("#importStatus"),
   toggleFormButton: document.querySelector("#toggleFormButton"),
   transactionForm: document.querySelector("#transactionForm"),
   cancelFormButton: document.querySelector("#cancelFormButton"),
@@ -172,6 +174,14 @@ function attachEvents() {
     closeForm();
     persistState();
     render();
+  });
+
+  elements.importFileInput.addEventListener("change", async (event) => {
+    const [file] = event.target.files || [];
+    if (!file) return;
+
+    await importTransactionsFromFile(file);
+    elements.importFileInput.value = "";
   });
 
   elements.toggleFormButton.addEventListener("click", () => {
@@ -494,9 +504,10 @@ function renderActivityFeed(items) {
 function renderRoleUI() {
   const adminMode = state.selectedRole === "admin";
   elements.toggleFormButton.disabled = !adminMode;
+  elements.importFileInput.disabled = !adminMode;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
   elements.roleNote.textContent = adminMode
-    ? `Admin mode is active. You can add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.`
+    ? `Admin mode is active. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.`
     : `Viewer mode is active. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
@@ -602,6 +613,140 @@ function closeForm() {
   state.formOpen = false;
   state.editingId = null;
   elements.transactionForm.reset();
+}
+
+async function importTransactionsFromFile(file) {
+  if (state.selectedRole !== "admin") {
+    setImportStatus("Switch to admin mode to import transactions.", "error");
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const rows = file.name.toLowerCase().endsWith(".json") ? parseJsonTransactions(text) : parseCsvTransactions(text);
+    const normalized = rows.map(normalizeImportedTransaction).filter(Boolean);
+
+    if (!normalized.length) {
+      setImportStatus("No valid transactions were found in that file.", "error");
+      return;
+    }
+
+    state.transactions = [...normalized, ...state.transactions];
+    persistState();
+    render();
+    setImportStatus(`Imported ${normalized.length} transaction${normalized.length === 1 ? "" : "s"} from ${file.name}.`, "success");
+  } catch (error) {
+    setImportStatus(`Import failed: ${error.message}`, "error");
+  }
+}
+
+function parseJsonTransactions(text) {
+  const parsed = JSON.parse(text);
+  if (Array.isArray(parsed)) return parsed;
+  if (Array.isArray(parsed.transactions)) return parsed.transactions;
+  throw new Error("JSON must be an array or contain a transactions array.");
+}
+
+function parseCsvTransactions(text) {
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    throw new Error("CSV needs a header row and at least one transaction.");
+  }
+
+  const headers = splitCsvLine(lines[0]).map((header) => header.trim().toLowerCase());
+  return lines.slice(1).map((line) => {
+    const values = splitCsvLine(line);
+    return headers.reduce((row, header, index) => {
+      row[header] = values[index]?.trim() || "";
+      return row;
+    }, {});
+  });
+}
+
+function splitCsvLine(line) {
+  const result = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      if (insideQuotes && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === "," && !insideQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  result.push(current);
+  return result;
+}
+
+function normalizeImportedTransaction(row) {
+  const description = String(
+    row.description || row.title || row.merchant || row.name || row.note || row.details || "",
+  ).trim();
+  const dateValue = String(row.date || row.transaction_date || row.created_at || row.time || "").trim();
+  const amountValue = Number.parseFloat(
+    String(row.amount || row.value || row.total || row.money || "0").replace(/[^0-9.-]/g, ""),
+  );
+  const typeValue = String(row.type || row.transaction_type || row.kind || "").trim().toLowerCase();
+  const categoryValue = String(row.category || row.group || row.label || "Other").trim();
+  const normalizedDate = normalizeDate(dateValue);
+
+  if (!description || !normalizedDate || Number.isNaN(amountValue) || amountValue === 0) {
+    return null;
+  }
+
+  const normalizedType = typeValue === "income" || amountValue > 0 && /income|credit|received/.test(typeValue)
+    ? "income"
+    : typeValue === "expense" || /debit|spent|payment/.test(typeValue)
+      ? "expense"
+      : amountValue >= 0
+        ? "expense"
+        : "income";
+
+  return {
+    id: Date.now() + Math.floor(Math.random() * 100000),
+    description,
+    date: normalizedDate,
+    amount: Math.abs(amountValue),
+    category: categories.includes(categoryValue) ? categoryValue : "Other",
+    type: normalizedType,
+  };
+}
+
+function normalizeDate(value) {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  const parts = value.split(/[/-]/).map((part) => part.trim());
+  if (parts.length !== 3) return "";
+
+  const [first, second, third] = parts;
+  const yyyy = third.length === 4 ? third : first.length === 4 ? first : "";
+  const mm = first.length === 4 ? second : second;
+  const dd = first.length === 4 ? third : first;
+
+  if (!yyyy) return "";
+  return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+}
+
+function setImportStatus(message, tone) {
+  elements.importStatus.textContent = message;
+  elements.importStatus.className = `import-status ${tone}`;
 }
 
 function removeTransaction(transactionId) {

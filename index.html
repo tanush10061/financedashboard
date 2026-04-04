@@ -128,10 +128,24 @@
               <p class="panel-kicker">Activity</p>
               <h2 id="transactionsHeading">Transactions</h2>
             </div>
-            <button id="toggleFormButton" class="primary-button" type="button">
-              Add transaction
-            </button>
+            <div class="transactions-actions">
+              <label class="import-button" for="importFileInput">Import file</label>
+              <input
+                id="importFileInput"
+                type="file"
+                accept=".csv,.json,application/json,text/csv"
+                hidden
+              />
+              <button id="toggleFormButton" class="primary-button" type="button">
+                Add transaction
+              </button>
+            </div>
           </div>
+
+          <div class="import-note">
+            Import transactions from a CSV or JSON export, then continue editing them manually in admin mode.
+          </div>
+          <div id="importStatus" class="import-status hidden" aria-live="polite"></div>
 
           <form id="transactionForm" class="transaction-form hidden">
             <div class="form-grid">

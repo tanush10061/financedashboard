@@ -470,6 +470,13 @@ input:focus {
   align-items: center;
 }
 
+.transactions-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .primary-button,
 .ghost-button,
 .table-action {
@@ -485,6 +492,18 @@ input:focus {
   color: var(--text);
 }
 
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: rgba(17, 116, 95, 0.12);
+  color: var(--accent-deep);
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease, background 160ms ease;
+}
+
 .ghost-button,
 .table-action {
   background: rgba(30, 37, 35, 0.08);
@@ -498,7 +517,8 @@ input:focus {
 
 .primary-button:hover,
 .ghost-button:hover,
-.table-action:hover {
+.table-action:hover,
+.import-button:hover {
   transform: translateY(-1px);
 }
 
@@ -552,6 +572,27 @@ input:focus {
   border-radius: 18px;
   background: rgba(240, 140, 74, 0.12);
   color: #7a4723;
+}
+
+.import-note {
+  margin-bottom: 12px;
+  color: rgba(30, 37, 35, 0.62);
+}
+
+.import-status {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+}
+
+.import-status.success {
+  background: rgba(17, 116, 95, 0.12);
+  color: var(--accent-deep);
+}
+
+.import-status.error {
+  background: rgba(214, 93, 69, 0.14);
+  color: var(--warn);
 }
 
 .transactions-table {

@@ -11,6 +11,7 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - Budget tracking section with category-level progress
 - Recent activity feed for the latest transactions
 - Transactions table with search, filtering, sorting, editing, and deletion in admin mode
+- CSV/JSON import flow for transaction exports, with manual editing still available after import
 - Currency switcher for viewing the dashboard in `USD`, `INR`, `EUR`, or `GBP`
 - Simulated role-based UI:
   - `Viewer` can inspect the dashboard and transactions
