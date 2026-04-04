@@ -98,7 +98,7 @@ select {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: 220px;
+  min-width: 320px;
   position: relative;
   z-index: 1;
 }
@@ -115,6 +115,28 @@ select {
   padding: 18px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.user-card {
+  gap: 14px;
+}
+
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.user-card-header strong {
+  font-size: 0.92rem;
+  color: #fffaf3;
+}
+
+.user-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .control-card span,

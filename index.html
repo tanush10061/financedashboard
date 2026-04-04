@@ -25,6 +25,30 @@
         </div>
 
         <div class="hero-controls">
+          <div class="control-card user-card">
+            <div class="user-card-header">
+              <span>User</span>
+              <strong id="activeUserLabel">Demo User</strong>
+            </div>
+            <label>
+              <span>Switch user</span>
+              <select id="userSelect" aria-label="Select user"></select>
+            </label>
+            <div class="user-form-grid">
+              <label>
+                <span>Username</span>
+                <input id="userNameInput" type="text" placeholder="Aarav Singh" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input id="userEmailInput" type="email" placeholder="aarav@example.com" />
+              </label>
+            </div>
+            <button id="addUserButton" class="ghost-button" type="button">
+              Add user
+            </button>
+          </div>
+
           <label class="control-card">
             <span>Role</span>
             <select id="roleSelect" aria-label="Select role">

@@ -50,9 +50,29 @@ const initialTransactions = [
   { id: 19, date: "2026-03-28", description: "Weekend groceries", amount: 96.18, category: "Food", type: "expense" },
 ];
 
+function cloneTransactions(transactions) {
+  return transactions.map((transaction) => ({ ...transaction }));
+}
+
+function createUserProfile(name, email, transactions = initialTransactions) {
+  return {
+    id: `user-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+    name,
+    email,
+    transactions: cloneTransactions(transactions),
+    lastImportedIds: [],
+    lastImportedFileName: "",
+  };
+}
+
 const state = loadState();
 
 const elements = {
+  userSelect: document.querySelector("#userSelect"),
+  userNameInput: document.querySelector("#userNameInput"),
+  userEmailInput: document.querySelector("#userEmailInput"),
+  addUserButton: document.querySelector("#addUserButton"),
+  activeUserLabel: document.querySelector("#activeUserLabel"),
   roleSelect: document.querySelector("#roleSelect"),
   currencySelect: document.querySelector("#currencySelect"),
   resetDataButton: document.querySelector("#resetDataButton"),
@@ -92,44 +112,79 @@ function loadState() {
 
   if (!saved) {
     return {
+      currentUserId: "demo-user",
+      users: [
+        {
+          id: "demo-user",
+          name: "Demo User",
+          email: "demo@pulseledger.app",
+          transactions: cloneTransactions(initialTransactions),
+          lastImportedIds: [],
+          lastImportedFileName: "",
+        },
+      ],
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
-      lastImportedIds: [],
-      lastImportedFileName: "",
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
-      transactions: initialTransactions,
     };
   }
 
   try {
     const parsed = JSON.parse(saved);
+    const migratedUsers = Array.isArray(parsed.users) && parsed.users.length
+      ? parsed.users.map((user, index) => ({
+          id: user.id || `user-${index + 1}`,
+          name: user.name || `User ${index + 1}`,
+          email: user.email || `user${index + 1}@pulseledger.app`,
+          transactions: Array.isArray(user.transactions) ? user.transactions : cloneTransactions(initialTransactions),
+          lastImportedIds: Array.isArray(user.lastImportedIds) ? user.lastImportedIds : [],
+          lastImportedFileName: user.lastImportedFileName || "",
+        }))
+      : [
+          {
+            id: "demo-user",
+            name: "Demo User",
+            email: "demo@pulseledger.app",
+            transactions: Array.isArray(parsed.transactions) && parsed.transactions.length ? parsed.transactions : cloneTransactions(initialTransactions),
+            lastImportedIds: Array.isArray(parsed.lastImportedIds) ? parsed.lastImportedIds : [],
+            lastImportedFileName: parsed.lastImportedFileName || "",
+          },
+        ];
+
     return {
+      currentUserId: migratedUsers.some((user) => user.id === parsed.currentUserId) ? parsed.currentUserId : migratedUsers[0].id,
+      users: migratedUsers,
       selectedRole: parsed.selectedRole || "viewer",
       selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
       editingId: null,
-      lastImportedIds: Array.isArray(parsed.lastImportedIds) ? parsed.lastImportedIds : [],
-      lastImportedFileName: parsed.lastImportedFileName || "",
       filters: {
         search: parsed.filters?.search || "",
         type: parsed.filters?.type || "all",
         category: parsed.filters?.category || "all",
         sort: parsed.filters?.sort || "date-desc",
       },
-      transactions: Array.isArray(parsed.transactions) && parsed.transactions.length ? parsed.transactions : initialTransactions,
     };
   } catch (error) {
     return {
+      currentUserId: "demo-user",
+      users: [
+        {
+          id: "demo-user",
+          name: "Demo User",
+          email: "demo@pulseledger.app",
+          transactions: cloneTransactions(initialTransactions),
+          lastImportedIds: [],
+          lastImportedFileName: "",
+        },
+      ],
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
       editingId: null,
-      lastImportedIds: [],
-      lastImportedFileName: "",
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
-      transactions: initialTransactions,
     };
   }
 }
@@ -138,14 +193,45 @@ function persistState() {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
+      currentUserId: state.currentUserId,
+      users: state.users,
       selectedRole: state.selectedRole,
       selectedCurrency: state.selectedCurrency,
-      lastImportedIds: state.lastImportedIds,
-      lastImportedFileName: state.lastImportedFileName,
       filters: state.filters,
-      transactions: state.transactions,
     }),
   );
+}
+
+function getActiveUser() {
+  return state.users.find((user) => user.id === state.currentUserId) || state.users[0];
+}
+
+function getActiveTransactions() {
+  return getActiveUser().transactions;
+}
+
+function setActiveTransactions(transactions) {
+  getActiveUser().transactions = transactions;
+}
+
+function getLastImportedIds() {
+  return getActiveUser().lastImportedIds || [];
+}
+
+function getLastImportedFileName() {
+  return getActiveUser().lastImportedFileName || "";
+}
+
+function setLastImportedBatch(ids, fileName) {
+  const user = getActiveUser();
+  user.lastImportedIds = ids;
+  user.lastImportedFileName = fileName;
+}
+
+function clearLastImportedBatch() {
+  const user = getActiveUser();
+  user.lastImportedIds = [];
+  user.lastImportedFileName = "";
 }
 
 function populateCategoryOptions() {
@@ -158,6 +244,40 @@ function populateCategoryOptions() {
 }
 
 function attachEvents() {
+  elements.userSelect.addEventListener("change", (event) => {
+    state.currentUserId = event.target.value;
+    state.editingId = null;
+    state.formOpen = false;
+    persistState();
+    render();
+  });
+
+  elements.addUserButton.addEventListener("click", () => {
+    const name = elements.userNameInput.value.trim();
+    const email = elements.userEmailInput.value.trim().toLowerCase();
+
+    if (!name || !email) {
+      setImportStatus("Enter both a username and email to add a user.", "error");
+      return;
+    }
+
+    if (state.users.some((user) => user.email.toLowerCase() === email)) {
+      setImportStatus("That email already exists. Switch to the existing user instead.", "error");
+      return;
+    }
+
+    const user = createUserProfile(name, email, []);
+    state.users.push(user);
+    state.currentUserId = user.id;
+    state.editingId = null;
+    state.formOpen = false;
+    elements.userNameInput.value = "";
+    elements.userEmailInput.value = "";
+    persistState();
+    render();
+    setImportStatus(`Created user ${name}. They now have their own separate dashboard data.`, "success");
+  });
+
   elements.roleSelect.addEventListener("change", (event) => {
     state.selectedRole = event.target.value;
 
@@ -176,12 +296,11 @@ function attachEvents() {
   });
 
   elements.resetDataButton.addEventListener("click", () => {
-    state.transactions = [...initialTransactions];
+    setActiveTransactions(cloneTransactions(initialTransactions));
     state.filters = { search: "", type: "all", category: "all", sort: "date-desc" };
     state.selectedRole = "viewer";
     state.selectedCurrency = "USD";
-    state.lastImportedIds = [];
-    state.lastImportedFileName = "";
+    clearLastImportedBatch();
     closeForm();
     persistState();
     render();
@@ -232,12 +351,13 @@ function attachEvents() {
 
     if (!payload.description || !payload.date || !payload.amount) return;
 
-    const index = state.transactions.findIndex((transaction) => transaction.id === state.editingId);
+    const transactions = getActiveTransactions();
+    const index = transactions.findIndex((transaction) => transaction.id === state.editingId);
 
     if (index >= 0) {
-      state.transactions[index] = payload;
+      transactions[index] = payload;
     } else {
-      state.transactions = [payload, ...state.transactions];
+      setActiveTransactions([payload, ...transactions]);
     }
 
     closeForm();
@@ -271,6 +391,14 @@ function attachEvents() {
 }
 
 function render() {
+  const activeUser = getActiveUser();
+  const transactions = getActiveTransactions();
+
+  elements.userSelect.innerHTML = state.users
+    .map((user) => `<option value="${user.id}">${user.name} (${user.email})</option>`)
+    .join("");
+  elements.userSelect.value = activeUser.id;
+  elements.activeUserLabel.textContent = activeUser.name;
   elements.roleSelect.value = state.selectedRole;
   elements.currencySelect.value = state.selectedCurrency;
   elements.searchInput.value = state.filters.search;
@@ -279,17 +407,17 @@ function render() {
   elements.sortSelect.value = state.filters.sort;
 
   const filteredTransactions = getFilteredTransactions();
-  const summary = getSummary(state.transactions);
-  const monthlyLabel = getMonthlyLabel(state.transactions);
+  const summary = getSummary(transactions);
+  const monthlyLabel = getMonthlyLabel(transactions);
 
   elements.summaryMonthLabel.textContent = monthlyLabel;
   renderSummary(summary);
-  renderMetrics(getKeyMetrics(state.transactions));
-  renderTrendChart(getTrendData(state.transactions));
-  renderCategoryChart(getCategoryTotals(state.transactions));
-  renderInsights(getInsights(state.transactions));
-  renderBudgetStatus(getBudgetStatus(state.transactions));
-  renderActivityFeed(getRecentActivity(state.transactions));
+  renderMetrics(getKeyMetrics(transactions));
+  renderTrendChart(getTrendData(transactions));
+  renderCategoryChart(getCategoryTotals(transactions));
+  renderInsights(getInsights(transactions));
+  renderBudgetStatus(getBudgetStatus(transactions));
+  renderActivityFeed(getRecentActivity(transactions));
   renderRoleUI();
   renderTransactions(filteredTransactions);
 }
@@ -517,14 +645,15 @@ function renderActivityFeed(items) {
 }
 
 function renderRoleUI() {
+  const activeUser = getActiveUser();
   const adminMode = state.selectedRole === "admin";
   elements.toggleFormButton.disabled = !adminMode;
   elements.importFileInput.disabled = !adminMode;
-  elements.removeImportButton.disabled = !adminMode || !state.lastImportedIds.length;
+  elements.removeImportButton.disabled = !adminMode || !getLastImportedIds().length;
   elements.toggleFormButton.textContent = state.editingId ? "Edit transaction" : "Add transaction";
   elements.roleNote.textContent = adminMode
-    ? `Admin mode is active. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.${state.lastImportedFileName ? ` Last imported file: ${state.lastImportedFileName}.` : ""}`
-    : `Viewer mode is active. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
+    ? `Admin mode is active for ${activeUser.name}. You can import, add, edit, or remove transactions. Display currency: ${state.selectedCurrency}.${getLastImportedFileName() ? ` Last imported file: ${getLastImportedFileName()}.` : ""}`
+    : `Viewer mode is active for ${activeUser.name}. Data remains visible, but editing is disabled. Display currency: ${state.selectedCurrency}.`;
 
   elements.transactionForm.classList.toggle("hidden", !adminMode || !state.formOpen);
 }
@@ -603,7 +732,7 @@ function renderTransactions(transactions) {
 function startEdit(transactionId) {
   if (state.selectedRole !== "admin") return;
 
-  const transaction = state.transactions.find((item) => item.id === transactionId);
+  const transaction = getActiveTransactions().find((item) => item.id === transactionId);
   if (!transaction) return;
 
   state.editingId = transaction.id;
@@ -647,9 +776,8 @@ async function importTransactionsFromFile(file) {
       return;
     }
 
-    state.lastImportedIds = normalized.map((transaction) => transaction.id);
-    state.lastImportedFileName = file.name;
-    state.transactions = [...normalized, ...state.transactions];
+    setLastImportedBatch(normalized.map((transaction) => transaction.id), file.name);
+    setActiveTransactions([...normalized, ...getActiveTransactions()]);
     persistState();
     render();
     setImportStatus(`Imported ${normalized.length} transaction${normalized.length === 1 ? "" : "s"} from ${file.name}.`, "success");
@@ -798,25 +926,24 @@ function setImportStatus(message, tone) {
 }
 
 function removeImportedBatch() {
-  if (state.selectedRole !== "admin" || !state.lastImportedIds.length) {
+  if (state.selectedRole !== "admin" || !getLastImportedIds().length) {
     setImportStatus("There is no imported file batch to remove.", "error");
     return;
   }
 
-  const fileName = state.lastImportedFileName || "the last imported file";
+  const fileName = getLastImportedFileName() || "the last imported file";
   const confirmed = window.confirm(`Remove all transactions imported from ${fileName}?`);
   if (!confirmed) return;
 
-  const importedIdSet = new Set(state.lastImportedIds);
-  state.transactions = state.transactions.filter((transaction) => !importedIdSet.has(transaction.id));
+  const importedIdSet = new Set(getLastImportedIds());
+  setActiveTransactions(getActiveTransactions().filter((transaction) => !importedIdSet.has(transaction.id)));
 
   if (state.editingId && importedIdSet.has(state.editingId)) {
     closeForm();
   }
 
-  const removedCount = state.lastImportedIds.length;
-  state.lastImportedIds = [];
-  state.lastImportedFileName = "";
+  const removedCount = getLastImportedIds().length;
+  clearLastImportedBatch();
   persistState();
   render();
   setImportStatus(`Removed ${removedCount} imported transaction${removedCount === 1 ? "" : "s"} from ${fileName}.`, "success");
@@ -825,13 +952,13 @@ function removeImportedBatch() {
 function removeTransaction(transactionId) {
   if (state.selectedRole !== "admin") return;
 
-  const transaction = state.transactions.find((item) => item.id === transactionId);
+  const transaction = getActiveTransactions().find((item) => item.id === transactionId);
   if (!transaction) return;
 
   const confirmed = window.confirm(`Delete "${transaction.description}" from ${formatDate(transaction.date)}?`);
   if (!confirmed) return;
 
-  state.transactions = state.transactions.filter((item) => item.id !== transactionId);
+  setActiveTransactions(getActiveTransactions().filter((item) => item.id !== transactionId));
 
   if (state.editingId === transactionId) {
     closeForm();
@@ -844,7 +971,7 @@ function removeTransaction(transactionId) {
 function getFilteredTransactions() {
   const query = state.filters.search.trim().toLowerCase();
 
-  return [...state.transactions]
+  return [...getActiveTransactions()]
     .filter((transaction) => {
       const matchesSearch =
         !query ||
