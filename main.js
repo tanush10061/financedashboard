@@ -5,6 +5,15 @@ const currencyConfig = {
   EUR: { locale: "de-DE", code: "EUR", rate: 0.92 },
   GBP: { locale: "en-GB", code: "GBP", rate: 0.79 },
 };
+const categoryBudgets = {
+  Housing: 1800,
+  Food: 550,
+  Transport: 220,
+  Utilities: 240,
+  Entertainment: 180,
+  Health: 140,
+  Savings: 500,
+};
 
 const categories = [
   "Housing",
@@ -48,10 +57,13 @@ const elements = {
   currencySelect: document.querySelector("#currencySelect"),
   resetDataButton: document.querySelector("#resetDataButton"),
   summaryCards: document.querySelector("#summaryCards"),
+  keyMetrics: document.querySelector("#keyMetrics"),
   summaryMonthLabel: document.querySelector("#summaryMonthLabel"),
   trendChart: document.querySelector("#trendChart"),
   categoryChart: document.querySelector("#categoryChart"),
   insightsList: document.querySelector("#insightsList"),
+  budgetStatus: document.querySelector("#budgetStatus"),
+  activityFeed: document.querySelector("#activityFeed"),
   toggleFormButton: document.querySelector("#toggleFormButton"),
   transactionForm: document.querySelector("#transactionForm"),
   cancelFormButton: document.querySelector("#cancelFormButton"),
@@ -247,9 +259,12 @@ function render() {
 
   elements.summaryMonthLabel.textContent = monthlyLabel;
   renderSummary(summary);
+  renderMetrics(getKeyMetrics(state.transactions));
   renderTrendChart(getTrendData(state.transactions));
   renderCategoryChart(getCategoryTotals(state.transactions));
   renderInsights(getInsights(state.transactions));
+  renderBudgetStatus(getBudgetStatus(state.transactions));
+  renderActivityFeed(getRecentActivity(state.transactions));
   renderRoleUI();
   renderTransactions(filteredTransactions);
 }
@@ -340,6 +355,20 @@ function renderTrendChart(points) {
   `;
 }
 
+function renderMetrics(metrics) {
+  elements.keyMetrics.innerHTML = metrics
+    .map(
+      (metric) => `
+        <article class="metric-tile">
+          <p>${metric.label}</p>
+          <strong>${metric.value}</strong>
+          <span>${metric.detail}</span>
+        </article>
+      `,
+    )
+    .join("");
+}
+
 function renderCategoryChart(categoryTotals) {
   if (!categoryTotals.length) {
     elements.categoryChart.innerHTML = renderEmptyState("No expense categories yet", "Expense activity will appear here once transactions are added.");
@@ -407,6 +436,55 @@ function renderInsights(insights) {
           <p>${insight.title}</p>
           <strong>${insight.value}</strong>
           <span>${insight.detail}</span>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderBudgetStatus(items) {
+  if (!items.length) {
+    elements.budgetStatus.innerHTML = renderEmptyState("No budget data yet", "Expense categories will show budget progress here.");
+    return;
+  }
+
+  elements.budgetStatus.innerHTML = items
+    .map(
+      (item) => `
+        <article class="budget-item">
+          <div class="budget-head">
+            <div>
+              <strong>${item.category}</strong>
+              <span>${formatCurrency(item.spent)} of ${formatCurrency(item.budget)}</span>
+            </div>
+            <div class="budget-status ${item.statusTone}">${item.status}</div>
+          </div>
+          <div class="budget-track">
+            <div class="budget-fill ${item.statusTone}" style="width:${Math.min(item.progress, 100)}%"></div>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderActivityFeed(items) {
+  if (!items.length) {
+    elements.activityFeed.innerHTML = renderEmptyState("No recent activity", "Transactions will appear here as they are added.");
+    return;
+  }
+
+  elements.activityFeed.innerHTML = items
+    .map(
+      (item) => `
+        <article class="activity-item">
+          <div>
+            <strong>${item.description}</strong>
+            <span>${item.meta}</span>
+          </div>
+          <div class="${item.type === "income" ? "amount-positive" : "amount-negative"}">
+            ${item.type === "income" ? "+" : "-"}${formatCurrency(item.amount)}
+          </div>
         </article>
       `,
     )
@@ -590,6 +668,47 @@ function getSummary(transactions) {
   };
 }
 
+function getKeyMetrics(transactions) {
+  const expenses = transactions.filter((transaction) => transaction.type === "expense");
+  const incomes = transactions.filter((transaction) => transaction.type === "income");
+  const summary = getSummary(transactions);
+  const largestExpense = [...expenses].sort((left, right) => right.amount - left.amount)[0];
+  const latestIncome = [...incomes].sort((left, right) => new Date(right.date) - new Date(left.date))[0];
+  const avgExpense = expenses.length
+    ? expenses.reduce((sum, transaction) => sum + transaction.amount, 0) / expenses.length
+    : 0;
+  const activeCategories = new Set(expenses.map((transaction) => transaction.category)).size;
+  const savingsRate = summary.income ? Math.max(0, Math.round(((summary.income - summary.expenses) / summary.income) * 100)) : 0;
+
+  return [
+    {
+      label: "Savings rate",
+      value: `${savingsRate}%`,
+      detail: "Share of income left after recorded expenses.",
+    },
+    {
+      label: "Average expense",
+      value: formatCurrency(avgExpense),
+      detail: `${expenses.length} outgoing transactions in the current dataset.`,
+    },
+    {
+      label: "Largest expense",
+      value: largestExpense ? formatCurrency(largestExpense.amount) : "No data",
+      detail: largestExpense ? `${largestExpense.category} is the biggest outflow.` : "Add more expense activity.",
+    },
+    {
+      label: "Latest income",
+      value: latestIncome ? formatCurrency(latestIncome.amount) : "No data",
+      detail: latestIncome ? `${latestIncome.description} on ${formatDate(latestIncome.date)}.` : "Income activity will surface here.",
+    },
+    {
+      label: "Active categories",
+      value: String(activeCategories),
+      detail: "Distinct expense categories currently in use.",
+    },
+  ];
+}
+
 function getTrendData(transactions) {
   const sorted = [...transactions].sort((left, right) => new Date(left.date) - new Date(right.date));
   let runningBalance = 0;
@@ -640,6 +759,42 @@ function getInsights(transactions) {
       detail: "A quick read on how much income remains once outflows are covered.",
     },
   ];
+}
+
+function getBudgetStatus(transactions) {
+  const totals = transactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((accumulator, transaction) => {
+      accumulator[transaction.category] = (accumulator[transaction.category] || 0) + transaction.amount;
+      return accumulator;
+    }, {});
+
+  return Object.entries(categoryBudgets).map(([category, budget]) => {
+    const spent = totals[category] || 0;
+    const progress = budget ? Math.round((spent / budget) * 100) : 0;
+    const remaining = budget - spent;
+    const status = remaining >= 0 ? `${formatCurrency(remaining)} left` : `${formatCurrency(Math.abs(remaining))} over`;
+    const statusTone = progress > 100 ? "over" : progress > 80 ? "watch" : "healthy";
+
+    return {
+      category,
+      spent,
+      budget,
+      progress,
+      status,
+      statusTone,
+    };
+  });
+}
+
+function getRecentActivity(transactions) {
+  return [...transactions]
+    .sort((left, right) => new Date(right.date) - new Date(left.date))
+    .slice(0, 6)
+    .map((transaction) => ({
+      ...transaction,
+      meta: `${formatDate(transaction.date)} • ${transaction.category} • ${capitalize(transaction.type)}`,
+    }));
 }
 
 function getMonthlyComparison(transactions) {

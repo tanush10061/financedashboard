@@ -159,12 +159,15 @@ input:focus {
 }
 
 .summary-panel,
+.metrics-panel,
 .transactions-panel {
   grid-column: span 12;
 }
 
 .chart-panel,
-.insights-panel {
+.insights-panel,
+.budget-panel,
+.activity-panel {
   grid-column: span 6;
 }
 
@@ -200,6 +203,36 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-tile {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(30, 37, 35, 0.06);
+}
+
+.metric-tile p,
+.metric-tile strong,
+.metric-tile span {
+  display: block;
+  margin: 0;
+}
+
+.metric-tile p {
+  color: rgba(30, 37, 35, 0.54);
+  margin-bottom: 10px;
+}
+
+.metric-tile strong {
+  font-size: 1.35rem;
+  margin-bottom: 8px;
 }
 
 .summary-card {
@@ -339,6 +372,76 @@ input:focus {
 .insights-list {
   display: grid;
   gap: 14px;
+}
+
+.budget-list,
+.activity-feed {
+  display: grid;
+  gap: 14px;
+}
+
+.budget-item,
+.activity-item {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.budget-head,
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.budget-head strong,
+.activity-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.budget-head span,
+.activity-item span {
+  color: rgba(30, 37, 35, 0.56);
+}
+
+.budget-status {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.budget-status.healthy,
+.budget-fill.healthy {
+  background: rgba(17, 116, 95, 0.16);
+  color: var(--accent-deep);
+}
+
+.budget-status.watch,
+.budget-fill.watch {
+  background: rgba(240, 140, 74, 0.18);
+  color: #995211;
+}
+
+.budget-status.over,
+.budget-fill.over {
+  background: rgba(214, 93, 69, 0.16);
+  color: var(--warn);
+}
+
+.budget-track {
+  height: 10px;
+  margin-top: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(30, 37, 35, 0.08);
+}
+
+.budget-fill {
+  height: 100%;
+  border-radius: inherit;
 }
 
 .insight-card {
@@ -548,6 +651,7 @@ input:focus {
   }
 
   .summary-cards,
+  .metrics-grid,
   .form-grid,
   .filters-row,
   .table-head,
@@ -574,6 +678,7 @@ input:focus {
   }
 
   .summary-cards,
+  .metrics-grid,
   .form-grid,
   .filters-row,
   .table-head,
