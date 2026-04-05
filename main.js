@@ -952,14 +952,35 @@ function exportPdfReport() {
             width: 100%;
             border-collapse: collapse;
           }
+          .list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+          }
           .list li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #f6f1e8;
+            line-height: 1.45;
+            overflow-wrap: anywhere;
           }
           .table th, .table td {
             text-align: left;
             padding: 10px 0;
             border-bottom: 1px solid #e8e1d6;
             font-size: 14px;
+          }
+          .insight-label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #1e2523;
+          }
+          .insight-value {
+            display: block;
+            margin-bottom: 2px;
+            color: #1e2523;
           }
           .two-col {
             display: grid;
@@ -1008,7 +1029,16 @@ function exportPdfReport() {
             <section class="section">
               <h2>Key insights</h2>
               <ul class="list">
-                ${insights.map((item) => `<li><strong>${escapeHtml(item.title)}:</strong> ${escapeHtml(item.value)} <span class="muted">(${escapeHtml(item.detail)})</span></li>`).join("")}
+                ${insights
+                  .map(
+                    (item) => `
+                      <li>
+                        <span class="insight-label">${escapeHtml(item.title)}</span>
+                        <span class="insight-value">${escapeHtml(item.value)}</span>
+                        <span class="muted">${escapeHtml(item.detail)}</span>
+                      </li>`,
+                  )
+                  .join("")}
               </ul>
             </section>
             <section class="section">
