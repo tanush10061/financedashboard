@@ -151,6 +151,7 @@ const elements = {
   roleNote: document.querySelector("#roleNote"),
   goalsGrid: document.querySelector("#goalsGrid"),
   goalsSummary: document.querySelector("#goalsSummary"),
+  goalsHint: document.querySelector("#goalsHint"),
   toggleGoalFormButton: document.querySelector("#toggleGoalFormButton"),
   goalForm: document.querySelector("#goalForm"),
   goalNameInput: document.querySelector("#goalNameInput"),
@@ -158,6 +159,7 @@ const elements = {
   goalTargetInput: document.querySelector("#goalTargetInput"),
   cancelGoalButton: document.querySelector("#cancelGoalButton"),
   profileForm: document.querySelector("#profileForm"),
+  profileHint: document.querySelector("#profileHint"),
   profileNameInput: document.querySelector("#profileNameInput"),
   profileEmailInput: document.querySelector("#profileEmailInput"),
   profileIncomeInput: document.querySelector("#profileIncomeInput"),
@@ -165,6 +167,7 @@ const elements = {
   profileCityInput: document.querySelector("#profileCityInput"),
   profileStatus: document.querySelector("#profileStatus"),
   settingsForm: document.querySelector("#settingsForm"),
+  settingsHint: document.querySelector("#settingsHint"),
   notificationsToggle: document.querySelector("#notificationsToggle"),
   weeklyDigestToggle: document.querySelector("#weeklyDigestToggle"),
   spendingAlertsToggle: document.querySelector("#spendingAlertsToggle"),
@@ -782,6 +785,8 @@ function renderGoals() {
   elements.goalForm.classList.toggle("hidden", !adminMode || !state.goalFormOpen);
   elements.toggleGoalFormButton.disabled = !adminMode;
   elements.toggleGoalFormButton.textContent = state.goalFormOpen ? "Hide form" : "Add goal";
+  elements.goalsHint.classList.toggle("hidden", adminMode);
+  elements.goalsHint.textContent = "Switch to Admin to edit goals.";
 
   if (!goals.length) {
     elements.goalsSummary.innerHTML = renderEmptyState(
@@ -860,6 +865,8 @@ function renderProfile() {
   elements.profileIncomeInput.value = profile.monthlyIncome ? formatBudgetInputValue(profile.monthlyIncome) : "";
   elements.profileOccupationInput.value = profile.occupation || "";
   elements.profileCityInput.value = profile.city || "";
+  elements.profileHint.classList.toggle("hidden", state.selectedRole === "admin");
+  elements.profileHint.textContent = "Switch to Admin to edit profile details.";
 }
 
 function renderSettings() {
@@ -867,6 +874,8 @@ function renderSettings() {
   elements.notificationsToggle.checked = Boolean(settings.notifications);
   elements.weeklyDigestToggle.checked = Boolean(settings.weeklyDigest);
   elements.spendingAlertsToggle.checked = Boolean(settings.spendingAlerts);
+  elements.settingsHint.classList.toggle("hidden", state.selectedRole === "admin");
+  elements.settingsHint.textContent = "Switch to Admin to edit settings.";
 }
 
 function exportPdfReport() {

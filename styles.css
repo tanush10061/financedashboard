@@ -443,6 +443,15 @@ input:focus {
   height: 22px;
 }
 
+.section-hint {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(17, 116, 95, 0.08);
+  color: var(--accent-deep);
+  font-size: 0.92rem;
+}
+
 .metric-tile {
   padding: 18px;
   border-radius: 22px;
