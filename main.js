@@ -66,6 +66,7 @@ state.chartFocus = {
   categoryPinnedIndex: null,
 };
 state.authMode = "login";
+state.pendingOtp = null;
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
@@ -78,6 +79,9 @@ const elements = {
   signupModeButton: document.querySelector("#signupModeButton"),
   userNameInput: document.querySelector("#userNameInput"),
   userEmailInput: document.querySelector("#userEmailInput"),
+  otpFieldGroup: document.querySelector("#otpFieldGroup"),
+  otpInput: document.querySelector("#otpInput"),
+  resendOtpButton: document.querySelector("#resendOtpButton"),
   addUserButton: document.querySelector("#addUserButton"),
   activeUserLabel: document.querySelector("#activeUserLabel"),
   activeUserEmail: document.querySelector("#activeUserEmail"),
@@ -279,14 +283,32 @@ function populateCategoryOptions() {
 function attachEvents() {
   elements.loginModeButton.addEventListener("click", () => {
     state.authMode = "login";
+    state.pendingOtp = null;
+    elements.otpInput.value = "";
     setAuthStatus("", "");
     render();
   });
 
   elements.signupModeButton.addEventListener("click", () => {
     state.authMode = "signup";
+    state.pendingOtp = null;
+    elements.otpInput.value = "";
     setAuthStatus("", "");
     render();
+  });
+
+  elements.resendOtpButton.addEventListener("click", () => {
+    const name = elements.userNameInput.value.trim();
+    const email = elements.userEmailInput.value.trim().toLowerCase();
+    if (!validateAuthFields(name, email)) return;
+
+    const user = state.users.find((entry) => entry.email.toLowerCase() === email);
+    if (user) {
+      setAuthStatus("An account with that email already exists. Use Log in instead.", "error");
+      return;
+    }
+
+    sendSignupOtp(name, email);
   });
 
   elements.authCreateForm.addEventListener("submit", (event) => {
@@ -294,15 +316,7 @@ function attachEvents() {
     const name = elements.userNameInput.value.trim();
     const email = elements.userEmailInput.value.trim().toLowerCase();
 
-    if (!name || !email) {
-      setAuthStatus("Enter both a username and email to continue.", "error");
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setAuthStatus("Enter a valid email address to continue.", "error");
-      return;
-    }
+    if (!validateAuthFields(name, email)) return;
 
     const user = state.users.find((entry) => entry.email.toLowerCase() === email);
 
@@ -316,14 +330,30 @@ function attachEvents() {
         setAuthStatus("An account with that email already exists. Use Log in instead.", "error");
         return;
       }
+
+      const enteredOtp = elements.otpInput.value.trim();
+      const otpMatches =
+        state.pendingOtp &&
+        state.pendingOtp.name.toLowerCase() === name.toLowerCase() &&
+        state.pendingOtp.email === email &&
+        state.pendingOtp.code === enteredOtp;
+
+      if (!otpMatches) {
+        if (!state.pendingOtp || state.pendingOtp.email !== email || state.pendingOtp.name.toLowerCase() !== name.toLowerCase()) {
+          sendSignupOtp(name, email);
+          return;
+        }
+
+        setAuthStatus("Authentication failed. Enter the correct 6-digit OTP to create the account.", "error");
+        return;
+      }
     }
 
-    const activeUser = state.authMode === "signup"
-      ? createUserProfile(name, email, [])
-      : user;
+    const activeUser = state.authMode === "signup" ? createUserProfile(name, email, []) : user;
 
     if (state.authMode === "signup") {
       state.users.push(activeUser);
+      state.pendingOtp = null;
     }
 
     state.currentUserId = activeUser.id;
@@ -333,6 +363,7 @@ function attachEvents() {
     state.budgetFormOpen = false;
     elements.userNameInput.value = "";
     elements.userEmailInput.value = "";
+    elements.otpInput.value = "";
     persistState();
     render();
     setAuthStatus(
@@ -348,6 +379,7 @@ function attachEvents() {
     state.editingId = null;
     state.formOpen = false;
     state.budgetFormOpen = false;
+    state.pendingOtp = null;
     persistState();
     render();
     setAuthStatus("Signed out. Enter your details to continue.", "success");
@@ -555,8 +587,41 @@ function renderAuthMode() {
   elements.authTitle.textContent = loginMode ? "Log in to PulseLedger" : "Create your PulseLedger account";
   elements.authSubtitle.textContent = loginMode
     ? "Enter your username and email to open your personal finance workspace."
-    : "New here? Create an account with your username and email to start your workspace.";
-  elements.addUserButton.textContent = loginMode ? "Log in" : "Create account";
+    : "New here? Create an account with your username and email, then verify the OTP to start your workspace.";
+  elements.otpFieldGroup.classList.toggle("hidden", loginMode || !state.pendingOtp);
+  elements.otpInput.required = !loginMode && Boolean(state.pendingOtp);
+  elements.addUserButton.textContent = loginMode ? "Log in" : state.pendingOtp ? "Verify OTP" : "Send OTP";
+}
+
+function validateAuthFields(name, email) {
+  if (!name || !email) {
+    setAuthStatus("Enter both a username and email to continue.", "error");
+    return false;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    setAuthStatus("Enter a valid email address to continue.", "error");
+    return false;
+  }
+
+  return true;
+}
+
+function sendSignupOtp(name, email) {
+  const code = generateOtp();
+  state.pendingOtp = {
+    name,
+    email,
+    code,
+    createdAt: Date.now(),
+  };
+  elements.otpInput.value = "";
+  render();
+  setAuthStatus(`Demo OTP sent to ${email}. Use ${code} to verify this account.`, "success");
+}
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 function renderSummary(summary) {

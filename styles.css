@@ -103,6 +103,12 @@ select {
   margin-top: 22px;
 }
 
+.auth-otp-group {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
 .auth-divider {
   margin: 24px 0 0;
   padding-top: 20px;
@@ -124,6 +130,15 @@ select {
 
 .auth-submit-button:hover {
   background: linear-gradient(135deg, #15806a, #22947b);
+}
+
+.auth-secondary-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fffaf3;
+}
+
+.auth-secondary-button:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .auth-shell label span {
