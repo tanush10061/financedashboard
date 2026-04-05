@@ -59,6 +59,12 @@ function createUserProfile(name, email, transactions = initialTransactions) {
 }
 
 const state = loadState();
+state.chartFocus = {
+  trendHoverIndex: null,
+  trendPinnedIndex: null,
+  categoryHoverIndex: null,
+  categoryPinnedIndex: null,
+};
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
@@ -86,6 +92,7 @@ const elements = {
   cancelBudgetButton: document.querySelector("#cancelBudgetButton"),
   budgetStatus: document.querySelector("#budgetStatus"),
   activityFeed: document.querySelector("#activityFeed"),
+  activitySnapshot: document.querySelector("#activitySnapshot"),
   importFileInput: document.querySelector("#importFileInput"),
   importStatus: document.querySelector("#importStatus"),
   removeImportButton: document.querySelector("#removeImportButton"),
@@ -506,6 +513,7 @@ function render() {
   renderInsights(getInsights(transactions));
   renderBudgetStatus(getBudgetStatus(transactions, getActiveBudgets()));
   renderActivityFeed(getRecentActivity(transactions));
+  renderActivitySnapshot(transactions);
   renderRoleUI();
   renderTransactions(filteredTransactions);
 }
@@ -564,6 +572,8 @@ function renderTrendChart(points) {
     const y = height - padding - ((point.balance - min) / range) * (height - padding * 2);
     return { ...point, x, y };
   });
+  const activeIndex = getActiveTrendIndex(points.length);
+  const activePoint = coordinates[activeIndex];
 
   const linePath = coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
   const areaPath = `${linePath} L ${coordinates[coordinates.length - 1].x} ${height - padding} L ${coordinates[0].x} ${height - padding} Z`;
@@ -582,18 +592,32 @@ function renderTrendChart(points) {
       }).join("")}
       <path d="${areaPath}" fill="url(#trendFill)"></path>
       <path d="${linePath}" class="trend-line"></path>
+      <line x1="${activePoint.x}" y1="${padding}" x2="${activePoint.x}" y2="${height - padding}" class="trend-guide"></line>
       ${coordinates.map((point) => `
         <g>
-          <circle cx="${point.x}" cy="${point.y}" r="4" class="trend-dot"></circle>
-          <text x="${point.x}" y="${height - 10}" text-anchor="middle" class="axis-label">${point.label}</text>
+          <circle
+            cx="${point.x}"
+            cy="${point.y}"
+            r="${point.index === activeIndex ? 7 : 4}"
+            class="trend-dot ${point.index === activeIndex ? "is-active" : ""}"
+            data-trend-index="${point.index}"
+          ></circle>
+          <text
+            x="${point.x}"
+            y="${height - 10}"
+            text-anchor="middle"
+            class="axis-label ${point.index === activeIndex ? "is-active" : ""}"
+          >${point.index === activeIndex || points.length <= 12 || point.index % Math.ceil(points.length / 6) === 0 ? point.label : ""}</text>
         </g>
       `).join("")}
     </svg>
     <div class="chart-caption">
-      <strong>${formatCurrency(points[points.length - 1].balance)}</strong>
-      <span>Ending balance across the latest timeline in ${state.selectedCurrency}.</span>
+      <strong>${formatCurrency(activePoint.balance)}</strong>
+      <span>${activePoint.label} balance in ${state.selectedCurrency}. Click to lock this point.</span>
     </div>
   `;
+
+  attachTrendChartInteractions(coordinates);
 }
 
 function renderMetrics(metrics) {
@@ -618,6 +642,8 @@ function renderCategoryChart(categoryTotals) {
 
   const palette = ["#11745f", "#f08c4a", "#0f4c81", "#d65d45", "#ceb36c", "#3d6b52"];
   const total = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
+  const activeIndex = getActiveCategoryIndex(categoryTotals.length);
+  const activeCategory = categoryTotals[activeIndex];
   let offset = 0;
 
   const segments = categoryTotals
@@ -630,10 +656,12 @@ function renderCategoryChart(categoryTotals) {
           cy="80"
           fill="transparent"
           stroke="${palette[index % palette.length]}"
-          stroke-width="20"
+          stroke-width="${index === activeIndex ? 24 : 20}"
           stroke-dasharray="${value} ${100 - value}"
           stroke-dashoffset="${-offset}"
           pathLength="100"
+          class="donut-segment ${index === activeIndex ? "is-active" : ""}"
+          data-category-index="${index}"
         />
       `;
       offset += value;
@@ -648,14 +676,15 @@ function renderCategoryChart(categoryTotals) {
         <g transform="rotate(-90 80 80)">
           ${segments}
         </g>
-        <text x="80" y="74" text-anchor="middle" class="donut-total-label">Spent</text>
-        <text x="80" y="94" text-anchor="middle" class="donut-total-value">${formatCompactCurrency(total)}</text>
+        <text x="80" y="70" text-anchor="middle" class="donut-total-label">${activeCategory.category}</text>
+        <text x="80" y="92" text-anchor="middle" class="donut-total-value">${formatCompactCurrency(activeCategory.amount)}</text>
+        <text x="80" y="111" text-anchor="middle" class="donut-share-label">${Math.round((activeCategory.amount / total) * 100)}% of spending</text>
       </svg>
       <div class="legend-list">
         ${categoryTotals
           .map(
             (item, index) => `
-              <div class="legend-row">
+              <div class="legend-row ${index === activeIndex ? "is-active" : ""}" data-category-index="${index}">
                 <span class="legend-key">
                   <i style="background:${palette[index % palette.length]}"></i>${item.category}
                 </span>
@@ -667,6 +696,8 @@ function renderCategoryChart(categoryTotals) {
       </div>
     </div>
   `;
+
+  attachCategoryChartInteractions(categoryTotals.length);
 }
 
 function renderInsights(insights) {
@@ -717,6 +748,7 @@ function renderBudgetStatus(items) {
 function renderActivityFeed(items) {
   if (!items.length) {
     elements.activityFeed.innerHTML = renderEmptyState("No recent activity", "Transactions will appear here as they are added.");
+    elements.activitySnapshot.innerHTML = "";
     return;
   }
 
@@ -735,6 +767,123 @@ function renderActivityFeed(items) {
       `,
     )
     .join("");
+}
+
+function renderActivitySnapshot(transactions) {
+  if (!transactions.length) {
+    elements.activitySnapshot.innerHTML = "";
+    return;
+  }
+
+  const recent = [...transactions].sort((left, right) => new Date(right.date) - new Date(left.date)).slice(0, 10);
+  const incomeCount = recent.filter((item) => item.type === "income").length;
+  const expenseCount = recent.filter((item) => item.type === "expense").length;
+  const totalFlow = recent.reduce((sum, item) => sum + item.amount, 0);
+  const largest = [...recent].sort((left, right) => right.amount - left.amount)[0];
+  const categoryCounts = recent.reduce((accumulator, item) => {
+    accumulator[item.category] = (accumulator[item.category] || 0) + 1;
+    return accumulator;
+  }, {});
+  const topCategory = Object.entries(categoryCounts).sort((left, right) => right[1] - left[1])[0];
+
+  elements.activitySnapshot.innerHTML = `
+    <div class="snapshot-card">
+      <p class="snapshot-kicker">Live pulse</p>
+      <strong>${recent.length}</strong>
+      <span>Most recent transactions in focus</span>
+    </div>
+    <div class="snapshot-metrics">
+      <article class="snapshot-tile">
+        <p>Income entries</p>
+        <strong>${incomeCount}</strong>
+        <span>Credits in the latest batch</span>
+      </article>
+      <article class="snapshot-tile">
+        <p>Expense entries</p>
+        <strong>${expenseCount}</strong>
+        <span>Debits in the latest batch</span>
+      </article>
+      <article class="snapshot-tile">
+        <p>Flow volume</p>
+        <strong>${formatCompactCurrency(totalFlow)}</strong>
+        <span>Combined movement across recent activity</span>
+      </article>
+      <article class="snapshot-tile">
+        <p>Largest movement</p>
+        <strong>${largest ? formatCurrency(largest.amount) : "No data"}</strong>
+        <span>${largest ? `${largest.description} on ${formatDate(largest.date)}` : "Waiting for new activity"}</span>
+      </article>
+    </div>
+    <div class="snapshot-note">
+      <strong>${topCategory ? topCategory[0] : "No category yet"}</strong>
+      <span>${topCategory ? `Most frequent category in recent activity with ${topCategory[1]} entries.` : "Recent categories will appear here."}</span>
+    </div>
+  `;
+}
+
+function attachTrendChartInteractions(points) {
+  const svg = elements.trendChart.querySelector(".svg-chart");
+  if (!svg || !points.length) return;
+
+  const updateHoverFromClientX = (clientX) => {
+    const rect = svg.getBoundingClientRect();
+    const viewBoxWidth = svg.viewBox.baseVal.width || rect.width || 1;
+    const scaledX = ((clientX - rect.left) / Math.max(rect.width, 1)) * viewBoxWidth;
+
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    points.forEach((point, index) => {
+      const distance = Math.abs(point.x - scaledX);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    });
+
+    if (state.chartFocus.trendHoverIndex !== nearestIndex) {
+      state.chartFocus.trendHoverIndex = nearestIndex;
+      renderTrendChart(points);
+    }
+  };
+
+  svg.addEventListener("mousemove", (event) => {
+    updateHoverFromClientX(event.clientX);
+  });
+
+  svg.addEventListener("click", (event) => {
+    updateHoverFromClientX(event.clientX);
+    state.chartFocus.trendPinnedIndex = state.chartFocus.trendHoverIndex;
+    renderTrendChart(points);
+  });
+
+  svg.addEventListener("mouseleave", () => {
+    state.chartFocus.trendHoverIndex = null;
+    renderTrendChart(points);
+  });
+}
+
+function attachCategoryChartInteractions() {
+  const interactiveNodes = elements.categoryChart.querySelectorAll("[data-category-index]");
+
+  interactiveNodes.forEach((node) => {
+    const index = Number(node.dataset.categoryIndex);
+
+    node.addEventListener("mouseenter", () => {
+      state.chartFocus.categoryHoverIndex = index;
+      renderCategoryChart(getCategoryTotals(getActiveTransactions()));
+    });
+
+    node.addEventListener("mouseleave", () => {
+      state.chartFocus.categoryHoverIndex = null;
+      renderCategoryChart(getCategoryTotals(getActiveTransactions()));
+    });
+
+    node.addEventListener("click", () => {
+      state.chartFocus.categoryPinnedIndex = index;
+      renderCategoryChart(getCategoryTotals(getActiveTransactions()));
+    });
+  });
 }
 
 function renderRoleUI() {
@@ -1195,9 +1344,10 @@ function getTrendData(transactions) {
   const sorted = [...transactions].sort((left, right) => new Date(left.date) - new Date(right.date));
   let runningBalance = 0;
 
-  return sorted.map((transaction) => {
+  return sorted.map((transaction, index) => {
     runningBalance += transaction.type === "income" ? transaction.amount : -transaction.amount;
     return {
+      index,
       label: new Date(transaction.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       balance: runningBalance,
     };
@@ -1348,6 +1498,28 @@ function formatCompactCurrency(value) {
 function convertAmount(value) {
   const config = currencyConfig[state.selectedCurrency] || currencyConfig.USD;
   return value * config.rate;
+}
+
+function getActiveTrendIndex(totalPoints) {
+  if (!totalPoints) return 0;
+  if (state.chartFocus.trendHoverIndex !== null && state.chartFocus.trendHoverIndex < totalPoints) {
+    return state.chartFocus.trendHoverIndex;
+  }
+  if (state.chartFocus.trendPinnedIndex !== null && state.chartFocus.trendPinnedIndex < totalPoints) {
+    return state.chartFocus.trendPinnedIndex;
+  }
+  return totalPoints - 1;
+}
+
+function getActiveCategoryIndex(totalCategories) {
+  if (!totalCategories) return 0;
+  if (state.chartFocus.categoryHoverIndex !== null && state.chartFocus.categoryHoverIndex < totalCategories) {
+    return state.chartFocus.categoryHoverIndex;
+  }
+  if (state.chartFocus.categoryPinnedIndex !== null && state.chartFocus.categoryPinnedIndex < totalCategories) {
+    return state.chartFocus.categoryPinnedIndex;
+  }
+  return 0;
 }
 
 function formatBudgetInputValue(value) {
