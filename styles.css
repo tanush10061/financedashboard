@@ -1039,6 +1039,11 @@ select:disabled {
     flex-direction: column;
   }
 
+  .hero-controls {
+    min-width: 0;
+    width: 100%;
+  }
+
   .summary-cards,
   .metrics-grid,
   .goals-grid,
@@ -1070,10 +1075,48 @@ select:disabled {
     padding-top: 20px;
   }
 
+  .app-tabs {
+    gap: 8px;
+    padding: 8px;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .app-tab {
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
+    padding: 11px 14px;
+  }
+
   .hero,
   .panel {
     padding: 20px;
     border-radius: 24px;
+  }
+
+  .hero-copy h1 {
+    font-size: clamp(2.3rem, 12vw, 3.6rem);
+  }
+
+  .hero-controls {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .user-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .transactions-actions,
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .transactions-actions > *,
+  .form-actions > * {
+    width: 100%;
   }
 
   .summary-cards,
@@ -1093,5 +1136,10 @@ select:disabled {
 
   .table-row {
     gap: 10px;
+  }
+
+  .settings-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

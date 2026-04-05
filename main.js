@@ -689,13 +689,11 @@ function attachEvents() {
     profile.city = elements.profileCityInput.value.trim();
 
     const user = getActiveUser();
-    user.name = profile.fullName;
-    user.email = profile.email;
     user.profile = profile;
 
     persistState();
     render();
-    setPanelStatus(elements.profileStatus, "Profile updated successfully.", "success");
+    setPanelStatus(elements.profileStatus, "Profile updated successfully. Login username remains unchanged.", "success");
   });
 
   elements.settingsForm.addEventListener("submit", (event) => {
