@@ -689,7 +689,14 @@ function renderCategoryChart(categoryTotals) {
           style="font-size:${labelFontSize}px"
         >${activeCategory.category}</text>
         <text x="80" y="91" text-anchor="middle" class="donut-total-value">${formatCompactCurrency(activeCategory.amount)}</text>
-        <text x="80" y="110" text-anchor="middle" class="donut-share-label">${Math.round((activeCategory.amount / total) * 100)}% of spending</text>
+        <text
+          x="80"
+          y="109"
+          text-anchor="middle"
+          textLength="58"
+          lengthAdjust="spacingAndGlyphs"
+          class="donut-share-label"
+        >${Math.round((activeCategory.amount / total) * 100)}% of spending</text>
       </svg>
       <div class="legend-list">
         ${categoryTotals
