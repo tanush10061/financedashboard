@@ -436,16 +436,18 @@ function attachEvents() {
 
     if (state.selectedRole !== "admin") return;
 
+    const enteredAmount = Number(elements.amountInput.value);
+
     const payload = {
       id: state.editingId ?? Date.now(),
       description: elements.descriptionInput.value.trim(),
       date: elements.dateInput.value,
-      amount: Number(elements.amountInput.value),
+      amount: convertToBaseCurrency(enteredAmount, state.selectedCurrency),
       category: elements.categoryInput.value,
       type: elements.typeInput.value,
     };
 
-    if (!payload.description || !payload.date || !payload.amount) return;
+    if (!payload.description || !payload.date || !Number.isFinite(payload.amount) || payload.amount <= 0) return;
 
     const transactions = getActiveTransactions();
     const index = transactions.findIndex((transaction) => transaction.id === state.editingId);
@@ -1000,7 +1002,7 @@ function startEdit(transactionId) {
   state.formOpen = true;
   elements.descriptionInput.value = transaction.description;
   elements.dateInput.value = transaction.date;
-  elements.amountInput.value = transaction.amount;
+  elements.amountInput.value = formatBudgetInputValue(transaction.amount);
   elements.categoryInput.value = transaction.category;
   elements.typeInput.value = transaction.type;
   render();
