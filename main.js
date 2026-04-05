@@ -46,12 +46,41 @@ function cloneTransactions(transactions) {
   return transactions.map((transaction) => ({ ...transaction }));
 }
 
+function createDefaultGoals() {
+  return {
+    emergencyFund: { label: "Emergency fund", current: 1800, target: 5000 },
+    travelFund: { label: "Travel fund", current: 650, target: 2200 },
+    gadgetUpgrade: { label: "Gadget upgrade", current: 1200, target: 1800 },
+  };
+}
+
+function createDefaultSettings() {
+  return {
+    notifications: true,
+    weeklyDigest: true,
+    spendingAlerts: true,
+  };
+}
+
+function createDefaultProfile(name = "Demo User", email = "demo@pulseledger.app") {
+  return {
+    fullName: name,
+    email,
+    monthlyIncome: 0,
+    occupation: "Independent professional",
+    city: "Mumbai",
+  };
+}
+
 function createUserProfile(name, email, transactions = initialTransactions) {
   return {
     id: `user-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
     name,
     email,
     transactions: cloneTransactions(transactions),
+    profile: createDefaultProfile(name, email),
+    goals: createDefaultGoals(),
+    settings: createDefaultSettings(),
     budgets: {},
     lastImportedIds: [],
     lastImportedFileName: "",
@@ -86,6 +115,11 @@ const elements = {
   activeUserLabel: document.querySelector("#activeUserLabel"),
   activeUserEmail: document.querySelector("#activeUserEmail"),
   signOutButton: document.querySelector("#signOutButton"),
+  appTabButtons: document.querySelectorAll("[data-app-tab]"),
+  dashboardView: document.querySelector("#dashboardView"),
+  goalsView: document.querySelector("#goalsView"),
+  profileView: document.querySelector("#profileView"),
+  settingsView: document.querySelector("#settingsView"),
   roleSelect: document.querySelector("#roleSelect"),
   currencySelect: document.querySelector("#currencySelect"),
   resetDataButton: document.querySelector("#resetDataButton"),
@@ -119,6 +153,21 @@ const elements = {
   sortSelect: document.querySelector("#sortSelect"),
   transactionsTable: document.querySelector("#transactionsTable"),
   roleNote: document.querySelector("#roleNote"),
+  goalsGrid: document.querySelector("#goalsGrid"),
+  goalsSummary: document.querySelector("#goalsSummary"),
+  profileForm: document.querySelector("#profileForm"),
+  profileNameInput: document.querySelector("#profileNameInput"),
+  profileEmailInput: document.querySelector("#profileEmailInput"),
+  profileIncomeInput: document.querySelector("#profileIncomeInput"),
+  profileOccupationInput: document.querySelector("#profileOccupationInput"),
+  profileCityInput: document.querySelector("#profileCityInput"),
+  profileStatus: document.querySelector("#profileStatus"),
+  settingsForm: document.querySelector("#settingsForm"),
+  notificationsToggle: document.querySelector("#notificationsToggle"),
+  weeklyDigestToggle: document.querySelector("#weeklyDigestToggle"),
+  spendingAlertsToggle: document.querySelector("#spendingAlertsToggle"),
+  settingsStatus: document.querySelector("#settingsStatus"),
+  exportDataButton: document.querySelector("#exportDataButton"),
 };
 
 populateCategoryOptions();
@@ -138,11 +187,15 @@ function loadState() {
           name: "Demo User",
           email: "demo@pulseledger.app",
           transactions: cloneTransactions(initialTransactions),
+          profile: createDefaultProfile("Demo User", "demo@pulseledger.app"),
+          goals: createDefaultGoals(),
+          settings: createDefaultSettings(),
           budgets: {},
           lastImportedIds: [],
           lastImportedFileName: "",
         },
       ],
+      activeTab: "dashboard",
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
@@ -160,6 +213,9 @@ function loadState() {
           name: user.name || `User ${index + 1}`,
           email: user.email || `user${index + 1}@pulseledger.app`,
           transactions: Array.isArray(user.transactions) ? user.transactions : cloneTransactions(initialTransactions),
+          profile: sanitizeProfile(user.profile, user.name || `User ${index + 1}`, user.email || `user${index + 1}@pulseledger.app`),
+          goals: sanitizeGoals(user.goals),
+          settings: sanitizeUserSettings(user.settings),
           budgets: sanitizeBudgets(user.budgets),
           lastImportedIds: Array.isArray(user.lastImportedIds) ? user.lastImportedIds : [],
           lastImportedFileName: user.lastImportedFileName || "",
@@ -170,6 +226,9 @@ function loadState() {
             name: "Demo User",
             email: "demo@pulseledger.app",
             transactions: Array.isArray(parsed.transactions) && parsed.transactions.length ? parsed.transactions : cloneTransactions(initialTransactions),
+            profile: sanitizeProfile(parsed.profile, "Demo User", "demo@pulseledger.app"),
+            goals: sanitizeGoals(parsed.goals),
+            settings: sanitizeUserSettings(parsed.settings),
             budgets: sanitizeBudgets(parsed.budgets),
             lastImportedIds: Array.isArray(parsed.lastImportedIds) ? parsed.lastImportedIds : [],
             lastImportedFileName: parsed.lastImportedFileName || "",
@@ -180,6 +239,7 @@ function loadState() {
       isAuthenticated: Boolean(parsed.isAuthenticated && migratedUsers.some((user) => user.id === parsed.currentUserId)),
       currentUserId: migratedUsers.some((user) => user.id === parsed.currentUserId) ? parsed.currentUserId : migratedUsers[0].id,
       users: migratedUsers,
+      activeTab: ["dashboard", "goals", "profile", "settings"].includes(parsed.activeTab) ? parsed.activeTab : "dashboard",
       selectedRole: parsed.selectedRole || "viewer",
       selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
@@ -202,11 +262,15 @@ function loadState() {
           name: "Demo User",
           email: "demo@pulseledger.app",
           transactions: cloneTransactions(initialTransactions),
+          profile: createDefaultProfile("Demo User", "demo@pulseledger.app"),
+          goals: createDefaultGoals(),
+          settings: createDefaultSettings(),
           budgets: {},
           lastImportedIds: [],
           lastImportedFileName: "",
         },
       ],
+      activeTab: "dashboard",
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
@@ -224,6 +288,7 @@ function persistState() {
       currentUserId: state.currentUserId,
       isAuthenticated: state.isAuthenticated,
       users: state.users,
+      activeTab: state.activeTab,
       selectedRole: state.selectedRole,
       selectedCurrency: state.selectedCurrency,
       filters: state.filters,
@@ -249,6 +314,18 @@ function getActiveBudgets() {
 
 function setActiveBudgets(budgets) {
   getActiveUser().budgets = budgets;
+}
+
+function getActiveProfile() {
+  return getActiveUser().profile || createDefaultProfile(getActiveUser().name, getActiveUser().email);
+}
+
+function getActiveGoals() {
+  return getActiveUser().goals || createDefaultGoals();
+}
+
+function getActiveSettings() {
+  return getActiveUser().settings || createDefaultSettings();
 }
 
 function getLastImportedIds() {
@@ -281,6 +358,14 @@ function populateCategoryOptions() {
 }
 
 function attachEvents() {
+  elements.appTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeTab = button.dataset.appTab;
+      persistState();
+      render();
+    });
+  });
+
   elements.loginModeButton.addEventListener("click", () => {
     state.authMode = "login";
     state.pendingOtp = null;
@@ -380,6 +465,7 @@ function attachEvents() {
     state.formOpen = false;
     state.budgetFormOpen = false;
     state.pendingOtp = null;
+    state.activeTab = "dashboard";
     persistState();
     render();
     setAuthStatus("Signed out. Enter your details to continue.", "success");
@@ -545,6 +631,65 @@ function attachEvents() {
     persistState();
     render();
   });
+
+  elements.profileForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const profile = getActiveProfile();
+    profile.fullName = elements.profileNameInput.value.trim() || profile.fullName;
+    profile.email = elements.profileEmailInput.value.trim().toLowerCase() || profile.email;
+    profile.monthlyIncome = convertToBaseCurrency(Number(elements.profileIncomeInput.value || 0), state.selectedCurrency);
+    profile.occupation = elements.profileOccupationInput.value.trim();
+    profile.city = elements.profileCityInput.value.trim();
+
+    const user = getActiveUser();
+    user.name = profile.fullName;
+    user.email = profile.email;
+    user.profile = profile;
+
+    persistState();
+    render();
+    setPanelStatus(elements.profileStatus, "Profile updated successfully.", "success");
+  });
+
+  elements.settingsForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const settings = getActiveSettings();
+    settings.notifications = elements.notificationsToggle.checked;
+    settings.weeklyDigest = elements.weeklyDigestToggle.checked;
+    settings.spendingAlerts = elements.spendingAlertsToggle.checked;
+    getActiveUser().settings = settings;
+
+    persistState();
+    render();
+    setPanelStatus(elements.settingsStatus, "Settings saved.", "success");
+  });
+
+  elements.exportDataButton.addEventListener("click", () => {
+    const user = getActiveUser();
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      user: {
+        name: user.name,
+        email: user.email,
+        profile: user.profile,
+        settings: user.settings,
+      },
+      budgets: user.budgets,
+      goals: user.goals,
+      transactions: user.transactions,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${user.name.toLowerCase().replace(/\s+/g, "-")}-pulseledger-export.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setPanelStatus(elements.settingsStatus, "Data export downloaded.", "success");
+  });
 }
 
 function render() {
@@ -554,6 +699,7 @@ function render() {
   elements.activeUserLabel.textContent = activeUser.name;
   elements.activeUserEmail.textContent = activeUser.email;
   renderAuthMode();
+  renderAppShell();
   elements.authScreen.classList.toggle("hidden", state.isAuthenticated);
   elements.dashboardApp.classList.toggle("hidden", !state.isAuthenticated);
   elements.roleSelect.value = state.selectedRole;
@@ -576,6 +722,9 @@ function render() {
   renderBudgetStatus(getBudgetStatus(transactions, getActiveBudgets()));
   renderActivityFeed(getRecentActivity(transactions));
   renderActivitySnapshot(transactions);
+  renderGoals();
+  renderProfile();
+  renderSettings();
   renderRoleUI();
   renderTransactions(filteredTransactions);
 }
@@ -591,6 +740,74 @@ function renderAuthMode() {
   elements.otpFieldGroup.classList.toggle("hidden", loginMode || !state.pendingOtp);
   elements.otpInput.required = !loginMode && Boolean(state.pendingOtp);
   elements.addUserButton.textContent = loginMode ? "Log in" : state.pendingOtp ? "Verify OTP" : "Send OTP";
+}
+
+function renderAppShell() {
+  elements.appTabButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.appTab === state.activeTab);
+  });
+
+  elements.dashboardView.classList.toggle("hidden", state.activeTab !== "dashboard");
+  elements.goalsView.classList.toggle("hidden", state.activeTab !== "goals");
+  elements.profileView.classList.toggle("hidden", state.activeTab !== "profile");
+  elements.settingsView.classList.toggle("hidden", state.activeTab !== "settings");
+}
+
+function renderGoals() {
+  const goals = Object.values(getActiveGoals());
+  const totalCurrent = goals.reduce((sum, goal) => sum + goal.current, 0);
+  const totalTarget = goals.reduce((sum, goal) => sum + goal.target, 0);
+
+  elements.goalsSummary.innerHTML = `
+    <article class="metric-tile">
+      <p>Total saved</p>
+      <strong>${formatCurrency(totalCurrent)}</strong>
+      <span>Across active savings goals.</span>
+    </article>
+    <article class="metric-tile">
+      <p>Total target</p>
+      <strong>${formatCurrency(totalTarget)}</strong>
+      <span>Combined milestones you are tracking.</span>
+    </article>
+    <article class="metric-tile">
+      <p>Progress</p>
+      <strong>${totalTarget ? Math.round((totalCurrent / totalTarget) * 100) : 0}%</strong>
+      <span>Portfolio completion across your goals.</span>
+    </article>
+  `;
+
+  elements.goalsGrid.innerHTML = goals
+    .map((goal) => {
+      const progress = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
+      return `
+        <article class="goal-card">
+          <p>${goal.label}</p>
+          <strong>${formatCurrency(goal.current)}</strong>
+          <span>${formatCurrency(goal.target)} target</span>
+          <div class="budget-track">
+            <div class="budget-fill ${progress > 80 ? "healthy" : "watch"}" style="width:${progress}%"></div>
+          </div>
+          <small>${progress}% funded</small>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderProfile() {
+  const profile = getActiveProfile();
+  elements.profileNameInput.value = profile.fullName || "";
+  elements.profileEmailInput.value = profile.email || "";
+  elements.profileIncomeInput.value = profile.monthlyIncome ? formatBudgetInputValue(profile.monthlyIncome) : "";
+  elements.profileOccupationInput.value = profile.occupation || "";
+  elements.profileCityInput.value = profile.city || "";
+}
+
+function renderSettings() {
+  const settings = getActiveSettings();
+  elements.notificationsToggle.checked = Boolean(settings.notifications);
+  elements.weeklyDigestToggle.checked = Boolean(settings.weeklyDigest);
+  elements.spendingAlertsToggle.checked = Boolean(settings.spendingAlerts);
 }
 
 function validateAuthFields(name, email) {
@@ -1333,6 +1550,17 @@ function setAuthStatus(message, tone) {
   elements.authStatus.className = `import-status ${tone}`;
 }
 
+function setPanelStatus(element, message, tone) {
+  if (!message) {
+    element.textContent = "";
+    element.className = "import-status hidden";
+    return;
+  }
+
+  element.textContent = message;
+  element.className = `import-status ${tone}`;
+}
+
 function removeImportedBatch() {
   if (state.selectedRole !== "admin" || !getLastImportedIds().length) {
     setImportStatus("There is no imported file batch to remove.", "error");
@@ -1700,4 +1928,41 @@ function sanitizeBudgets(budgets) {
     }
     return accumulator;
   }, {});
+}
+
+function sanitizeProfile(profile, fallbackName, fallbackEmail) {
+  const safeProfile = profile && typeof profile === "object" ? profile : {};
+  return {
+    fullName: safeProfile.fullName || fallbackName,
+    email: safeProfile.email || fallbackEmail,
+    monthlyIncome: Number.isFinite(Number(safeProfile.monthlyIncome)) ? Number(safeProfile.monthlyIncome) : 0,
+    occupation: safeProfile.occupation || "Independent professional",
+    city: safeProfile.city || "Mumbai",
+  };
+}
+
+function sanitizeGoals(goals) {
+  const safeGoals = goals && typeof goals === "object" ? goals : {};
+  const defaults = createDefaultGoals();
+
+  return Object.entries(defaults).reduce((accumulator, [key, goal]) => {
+    const savedGoal = safeGoals[key] || {};
+    accumulator[key] = {
+      label: savedGoal.label || goal.label,
+      current: Number.isFinite(Number(savedGoal.current)) ? Number(savedGoal.current) : goal.current,
+      target: Number.isFinite(Number(savedGoal.target)) ? Number(savedGoal.target) : goal.target,
+    };
+    return accumulator;
+  }, {});
+}
+
+function sanitizeUserSettings(settings) {
+  const safeSettings = settings && typeof settings === "object" ? settings : {};
+  const defaults = createDefaultSettings();
+
+  return {
+    notifications: typeof safeSettings.notifications === "boolean" ? safeSettings.notifications : defaults.notifications,
+    weeklyDigest: typeof safeSettings.weeklyDigest === "boolean" ? safeSettings.weeklyDigest : defaults.weeklyDigest,
+    spendingAlerts: typeof safeSettings.spendingAlerts === "boolean" ? safeSettings.spendingAlerts : defaults.spendingAlerts,
+  };
 }

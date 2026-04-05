@@ -16,6 +16,9 @@ A clean, responsive finance dashboard website built with plain HTML, CSS, and Ja
 - Account entry screen where a user signs in with username and email before entering the dashboard
 - Single-session app flow so the dashboard opens directly into that user's workspace instead of offering in-app account switching
 - Per-user budget setup so each account can define and update its own monthly category limits
+- App-style tab navigation with dedicated `Dashboard`, `Goals`, `Profile`, and `Settings` sections
+- Savings goals view with progress tracking across multiple targets
+- Profile and settings pages with export and preference controls
 - Simulated role-based UI:
   - `Viewer` can inspect the dashboard and transactions
   - `Admin` can add, edit, delete, import, and remove imported transactions

@@ -282,6 +282,35 @@ input:focus {
   margin-top: 18px;
 }
 
+.app-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 10px;
+  border-radius: 22px;
+  background: rgba(18, 30, 27, 0.72);
+  box-shadow: var(--shadow);
+}
+
+.app-tab {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: transparent;
+  color: rgba(248, 244, 237, 0.72);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.app-tab.is-active {
+  background: rgba(17, 116, 95, 0.9);
+  color: #fffaf3;
+}
+
+.app-view {
+  margin-top: 18px;
+}
+
 .panel {
   border-radius: 28px;
   padding: 24px;
@@ -346,6 +375,68 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
+}
+
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.goal-card {
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(30, 37, 35, 0.06);
+}
+
+.goal-card p,
+.goal-card strong,
+.goal-card span,
+.goal-card small {
+  display: block;
+}
+
+.goal-card p,
+.goal-card span,
+.goal-card small {
+  color: rgba(30, 37, 35, 0.58);
+}
+
+.goal-card strong {
+  margin: 10px 0 8px;
+  font-size: 1.8rem;
+}
+
+.profile-form,
+.settings-form {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-list {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.settings-row span {
+  color: var(--text-dark);
+  font-size: 1rem;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
 }
 
 .metric-tile {
@@ -944,12 +1035,17 @@ input:focus {
 
   .summary-cards,
   .metrics-grid,
+  .goals-grid,
   .snapshot-metrics,
   .form-grid,
   .filters-row,
   .table-head,
   .table-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-tabs {
+    overflow-x: auto;
   }
 
   .activity-layout {
@@ -976,6 +1072,7 @@ input:focus {
 
   .summary-cards,
   .metrics-grid,
+  .goals-grid,
   .snapshot-metrics,
   .form-grid,
   .filters-row,

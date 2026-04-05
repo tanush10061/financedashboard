@@ -107,7 +107,14 @@
         </div>
       </header>
 
-      <main class="dashboard-grid">
+      <nav class="app-tabs" aria-label="App navigation">
+        <button class="app-tab is-active" data-app-tab="dashboard" type="button">Dashboard</button>
+        <button class="app-tab" data-app-tab="goals" type="button">Goals</button>
+        <button class="app-tab" data-app-tab="profile" type="button">Profile</button>
+        <button class="app-tab" data-app-tab="settings" type="button">Settings</button>
+      </nav>
+
+      <main id="dashboardView" class="dashboard-grid">
         <section class="panel summary-panel" aria-labelledby="summaryHeading">
           <div class="panel-header">
             <div>
@@ -302,6 +309,105 @@
           <div id="transactionsTable" class="transactions-table"></div>
         </section>
       </main>
+
+      <section id="goalsView" class="app-view hidden">
+        <div class="dashboard-grid">
+          <section class="panel summary-panel" aria-labelledby="goalsSummaryHeading">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Planning</p>
+                <h2 id="goalsSummaryHeading">Savings goals</h2>
+              </div>
+            </div>
+            <div id="goalsSummary" class="metrics-grid"></div>
+          </section>
+
+          <section class="panel transactions-panel" aria-labelledby="goalsGridHeading">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Milestones</p>
+                <h2 id="goalsGridHeading">Goal tracker</h2>
+              </div>
+            </div>
+            <div id="goalsGrid" class="goals-grid"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="profileView" class="app-view hidden">
+        <div class="dashboard-grid">
+          <section class="panel transactions-panel" aria-labelledby="profileHeading">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Identity</p>
+                <h2 id="profileHeading">Profile</h2>
+              </div>
+            </div>
+            <form id="profileForm" class="profile-form">
+              <div class="form-grid">
+                <label>
+                  <span>Full name</span>
+                  <input id="profileNameInput" type="text" />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input id="profileEmailInput" type="email" />
+                </label>
+                <label>
+                  <span>Monthly income</span>
+                  <input id="profileIncomeInput" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Occupation</span>
+                  <input id="profileOccupationInput" type="text" />
+                </label>
+                <label>
+                  <span>City</span>
+                  <input id="profileCityInput" type="text" />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Save profile</button>
+              </div>
+            </form>
+            <div id="profileStatus" class="import-status hidden" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="settingsView" class="app-view hidden">
+        <div class="dashboard-grid">
+          <section class="panel transactions-panel" aria-labelledby="settingsHeading">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Preferences</p>
+                <h2 id="settingsHeading">Settings</h2>
+              </div>
+            </div>
+            <form id="settingsForm" class="settings-form">
+              <div class="settings-list">
+                <label class="settings-row">
+                  <span>Notifications</span>
+                  <input id="notificationsToggle" type="checkbox" />
+                </label>
+                <label class="settings-row">
+                  <span>Weekly digest</span>
+                  <input id="weeklyDigestToggle" type="checkbox" />
+                </label>
+                <label class="settings-row">
+                  <span>Spending alerts</span>
+                  <input id="spendingAlertsToggle" type="checkbox" />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Save settings</button>
+                <button id="exportDataButton" type="button" class="ghost-button">Export data</button>
+              </div>
+            </form>
+            <div id="settingsStatus" class="import-status hidden" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
     </div>
 
     <script type="module" src="./main.js"></script>
