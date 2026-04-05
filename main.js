@@ -55,6 +55,7 @@ function createDefaultSettings() {
     notifications: true,
     weeklyDigest: true,
     spendingAlerts: true,
+    darkMode: false,
   };
 }
 
@@ -171,6 +172,7 @@ const elements = {
   notificationsToggle: document.querySelector("#notificationsToggle"),
   weeklyDigestToggle: document.querySelector("#weeklyDigestToggle"),
   spendingAlertsToggle: document.querySelector("#spendingAlertsToggle"),
+  darkModeToggle: document.querySelector("#darkModeToggle"),
   settingsStatus: document.querySelector("#settingsStatus"),
   exportDataButton: document.querySelector("#exportDataButton"),
 };
@@ -706,6 +708,7 @@ function attachEvents() {
     settings.notifications = elements.notificationsToggle.checked;
     settings.weeklyDigest = elements.weeklyDigestToggle.checked;
     settings.spendingAlerts = elements.spendingAlertsToggle.checked;
+    settings.darkMode = elements.darkModeToggle.checked;
     getActiveUser().settings = settings;
 
     persistState();
@@ -751,6 +754,7 @@ function render() {
   renderGoals();
   renderProfile();
   renderSettings();
+  applyTheme();
   renderRoleUI();
   renderTransactions(filteredTransactions);
 }
@@ -874,8 +878,13 @@ function renderSettings() {
   elements.notificationsToggle.checked = Boolean(settings.notifications);
   elements.weeklyDigestToggle.checked = Boolean(settings.weeklyDigest);
   elements.spendingAlertsToggle.checked = Boolean(settings.spendingAlerts);
+  elements.darkModeToggle.checked = Boolean(settings.darkMode);
   elements.settingsHint.classList.toggle("hidden", state.selectedRole === "admin");
   elements.settingsHint.textContent = "Switch to Admin to edit settings.";
+}
+
+function applyTheme() {
+  document.body.dataset.theme = getActiveSettings().darkMode ? "dark" : "light";
 }
 
 function exportPdfReport() {
@@ -2365,5 +2374,6 @@ function sanitizeUserSettings(settings) {
     notifications: typeof safeSettings.notifications === "boolean" ? safeSettings.notifications : defaults.notifications,
     weeklyDigest: typeof safeSettings.weeklyDigest === "boolean" ? safeSettings.weeklyDigest : defaults.weeklyDigest,
     spendingAlerts: typeof safeSettings.spendingAlerts === "boolean" ? safeSettings.spendingAlerts : defaults.spendingAlerts,
+    darkMode: typeof safeSettings.darkMode === "boolean" ? safeSettings.darkMode : defaults.darkMode,
   };
 }

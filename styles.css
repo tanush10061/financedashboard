@@ -1,5 +1,9 @@
 :root {
   --bg: #f5efe4;
+  --bg-gradient:
+    radial-gradient(circle at top left, rgba(240, 140, 74, 0.26), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(17, 116, 95, 0.18), transparent 30%),
+    linear-gradient(180deg, #f4ede2 0%, #efe2d0 100%);
   --panel: rgba(15, 25, 24, 0.9);
   --panel-soft: rgba(255, 248, 238, 0.7);
   --text: #f8f4ed;
@@ -10,6 +14,28 @@
   --accent-deep: #11745f;
   --warn: #d65d45;
   --shadow: 0 24px 70px rgba(18, 23, 24, 0.15);
+  --surface: rgba(255, 251, 245, 0.74);
+  --surface-strong: rgba(255, 255, 255, 0.62);
+  --surface-border: rgba(30, 37, 35, 0.06);
+  --text-soft: rgba(30, 37, 35, 0.58);
+  --text-soft-2: rgba(30, 37, 35, 0.52);
+  --text-soft-3: rgba(30, 37, 35, 0.44);
+}
+
+body[data-theme="dark"] {
+  --bg: #101918;
+  --bg-gradient:
+    radial-gradient(circle at top left, rgba(240, 140, 74, 0.14), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(17, 116, 95, 0.18), transparent 28%),
+    linear-gradient(180deg, #101918 0%, #142220 100%);
+  --text-dark: #edf3ef;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  --surface: rgba(22, 34, 33, 0.9);
+  --surface-strong: rgba(28, 42, 40, 0.92);
+  --surface-border: rgba(255, 255, 255, 0.06);
+  --text-soft: rgba(237, 243, 239, 0.72);
+  --text-soft-2: rgba(237, 243, 239, 0.64);
+  --text-soft-3: rgba(237, 243, 239, 0.5);
 }
 
 * {
@@ -20,10 +46,7 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: "Space Grotesk", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(240, 140, 74, 0.26), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(17, 116, 95, 0.18), transparent 30%),
-    linear-gradient(180deg, #f4ede2 0%, #efe2d0 100%);
+  background: var(--bg-gradient);
   color: var(--text-dark);
 }
 
@@ -314,8 +337,8 @@ input:focus {
 .panel {
   border-radius: 28px;
   padding: 24px;
-  background: rgba(255, 251, 245, 0.74);
-  border: 1px solid rgba(30, 37, 35, 0.06);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 44px rgba(79, 60, 41, 0.08);
 }
@@ -351,7 +374,7 @@ input:focus {
 }
 
 .panel-kicker {
-  color: rgba(30, 37, 35, 0.44);
+  color: var(--text-soft-3);
   margin-bottom: 8px;
 }
 
@@ -386,8 +409,8 @@ input:focus {
 .goal-card {
   padding: 20px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(30, 37, 35, 0.06);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
 }
 
 .goal-card p,
@@ -400,7 +423,7 @@ input:focus {
 .goal-card p,
 .goal-card span,
 .goal-card small {
-  color: rgba(30, 37, 35, 0.58);
+  color: var(--text-soft);
 }
 
 .goal-card strong {
@@ -430,7 +453,7 @@ input:focus {
   gap: 18px;
   padding: 18px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--surface-strong);
 }
 
 .settings-row span {
@@ -455,8 +478,8 @@ input:focus {
 .metric-tile {
   padding: 18px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(30, 37, 35, 0.06);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
 }
 
 .metric-tile p,
@@ -554,7 +577,7 @@ input:focus {
 
 .axis-label {
   font-size: 11px;
-  fill: rgba(30, 37, 35, 0.52);
+  fill: var(--text-soft-2);
 }
 
 .axis-label.is-active {
@@ -598,7 +621,7 @@ input:focus {
 
 .donut-total-label {
   font-size: 11px;
-  fill: rgba(30, 37, 35, 0.45);
+  fill: var(--text-soft-3);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -611,7 +634,7 @@ input:focus {
 
 .donut-share-label {
   font-size: 8px;
-  fill: rgba(30, 37, 35, 0.52);
+  fill: var(--text-soft-2);
 }
 
 .legend-list {
@@ -679,8 +702,8 @@ input:focus {
 .snapshot-note {
   padding: 18px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(30, 37, 35, 0.06);
+  background: var(--surface-strong);
+  border: 1px solid var(--surface-border);
 }
 
 .snapshot-kicker {
@@ -688,7 +711,7 @@ input:focus {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 0.74rem;
-  color: rgba(30, 37, 35, 0.44);
+  color: var(--text-soft-3);
 }
 
 .snapshot-card strong,
@@ -706,7 +729,7 @@ input:focus {
 .snapshot-tile span,
 .snapshot-note span,
 .snapshot-tile p {
-  color: rgba(30, 37, 35, 0.58);
+  color: var(--text-soft);
 }
 
 .snapshot-metrics {
@@ -729,7 +752,7 @@ input:focus {
 .activity-item {
   padding: 16px 18px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--surface-strong);
 }
 
 .budget-head,
@@ -748,7 +771,7 @@ input:focus {
 
 .budget-head span,
 .activity-item span {
-  color: rgba(30, 37, 35, 0.56);
+  color: var(--text-soft);
 }
 
 .budget-status {
@@ -803,7 +826,7 @@ input:focus {
 
 .insight-card p {
   margin: 0 0 8px;
-  color: rgba(30, 37, 35, 0.6);
+  color: var(--text-soft);
 }
 
 .insight-card strong {
@@ -920,7 +943,7 @@ select:disabled {
 }
 
 .filters-row span {
-  color: rgba(30, 37, 35, 0.62);
+  color: var(--text-soft);
 }
 
 .role-note {
@@ -933,7 +956,7 @@ select:disabled {
 
 .import-note {
   margin-bottom: 12px;
-  color: rgba(30, 37, 35, 0.62);
+  color: var(--text-soft);
 }
 
 .import-status {
@@ -973,7 +996,7 @@ select:disabled {
 
 .table-head {
   padding: 0 14px 6px;
-  color: rgba(30, 37, 35, 0.5);
+  color: var(--text-soft-2);
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -982,7 +1005,7 @@ select:disabled {
 .table-row {
   padding: 16px 14px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-strong);
 }
 
 .table-row strong,
@@ -991,7 +1014,7 @@ select:disabled {
 }
 
 .table-row span {
-  color: rgba(30, 37, 35, 0.54);
+  color: var(--text-soft);
 }
 
 .pill {
@@ -1025,7 +1048,7 @@ select:disabled {
   width: 100%;
   padding: 28px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--surface-strong);
   text-align: center;
 }
 
