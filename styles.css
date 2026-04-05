@@ -20,6 +20,20 @@
   --text-soft: rgba(30, 37, 35, 0.58);
   --text-soft-2: rgba(30, 37, 35, 0.52);
   --text-soft-3: rgba(30, 37, 35, 0.44);
+  --input-bg: rgba(255, 255, 255, 0.88);
+  --input-border: rgba(30, 37, 35, 0.08);
+  --input-text: #1e2523;
+  --input-disabled-bg: rgba(228, 232, 229, 0.86);
+  --input-disabled-border: rgba(30, 37, 35, 0.08);
+  --input-disabled-text: rgba(30, 37, 35, 0.58);
+  --button-disabled-bg: rgba(30, 37, 35, 0.18);
+  --button-disabled-text: rgba(248, 244, 237, 0.82);
+  --hint-bg: rgba(17, 116, 95, 0.08);
+  --hint-text: #11745f;
+  --warning-bg: rgba(240, 140, 74, 0.12);
+  --warning-text: #7a4723;
+  --success-bg: rgba(17, 116, 95, 0.12);
+  --success-text: #11745f;
 }
 
 body[data-theme="dark"] {
@@ -36,6 +50,20 @@ body[data-theme="dark"] {
   --text-soft: rgba(237, 243, 239, 0.72);
   --text-soft-2: rgba(237, 243, 239, 0.64);
   --text-soft-3: rgba(237, 243, 239, 0.5);
+  --input-bg: rgba(242, 246, 243, 0.94);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-text: #1a2321;
+  --input-disabled-bg: rgba(227, 234, 229, 0.4);
+  --input-disabled-border: rgba(255, 255, 255, 0.12);
+  --input-disabled-text: rgba(245, 250, 247, 0.8);
+  --button-disabled-bg: rgba(236, 243, 239, 0.22);
+  --button-disabled-text: rgba(245, 250, 247, 0.94);
+  --hint-bg: rgba(17, 116, 95, 0.22);
+  --hint-text: rgba(186, 240, 225, 0.98);
+  --warning-bg: rgba(240, 140, 74, 0.22);
+  --warning-text: rgba(255, 220, 186, 0.98);
+  --success-bg: rgba(17, 116, 95, 0.24);
+  --success-text: rgba(191, 244, 229, 0.98);
 }
 
 * {
@@ -283,11 +311,11 @@ select {
 select,
 input {
   width: 100%;
-  border: 1px solid transparent;
+  border: 1px solid var(--input-border);
   border-radius: 14px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.88);
-  color: var(--text-dark);
+  background: var(--input-bg);
+  color: var(--input-text);
   transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
@@ -470,8 +498,8 @@ input:focus {
   margin: 14px 0 0;
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(17, 116, 95, 0.08);
-  color: var(--accent-deep);
+  background: var(--hint-bg);
+  color: var(--hint-text);
   font-size: 0.92rem;
 }
 
@@ -490,7 +518,7 @@ input:focus {
 }
 
 .metric-tile p {
-  color: rgba(30, 37, 35, 0.54);
+  color: var(--text-soft);
   margin-bottom: 10px;
 }
 
@@ -901,11 +929,21 @@ input:focus {
 
 .primary-button:disabled,
 .table-action:disabled,
-.ghost-button:disabled,
+.ghost-button:disabled {
+  background: var(--button-disabled-bg);
+  color: var(--button-disabled-text);
+  cursor: not-allowed;
+  transform: none;
+}
+
 input:disabled,
 select:disabled {
-  opacity: 0.45;
+  background: var(--input-disabled-bg);
+  border-color: var(--input-disabled-border);
+  color: var(--input-disabled-text);
+  -webkit-text-fill-color: var(--input-disabled-text);
   cursor: not-allowed;
+  opacity: 1;
   transform: none;
 }
 
@@ -950,8 +988,8 @@ select:disabled {
   margin: 18px 0 14px;
   padding: 12px 14px;
   border-radius: 18px;
-  background: rgba(240, 140, 74, 0.12);
-  color: #7a4723;
+  background: var(--warning-bg);
+  color: var(--warning-text);
 }
 
 .import-note {
@@ -966,8 +1004,8 @@ select:disabled {
 }
 
 .import-status.success {
-  background: rgba(17, 116, 95, 0.12);
-  color: var(--accent-deep);
+  background: var(--success-bg);
+  color: var(--success-text);
 }
 
 .import-status.error {
