@@ -408,6 +408,10 @@ input:focus {
   font-size: 1.8rem;
 }
 
+.goal-card .row-actions {
+  margin-top: 14px;
+}
+
 .profile-form,
 .settings-form {
   display: grid;

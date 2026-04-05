@@ -151,6 +151,12 @@ const elements = {
   roleNote: document.querySelector("#roleNote"),
   goalsGrid: document.querySelector("#goalsGrid"),
   goalsSummary: document.querySelector("#goalsSummary"),
+  toggleGoalFormButton: document.querySelector("#toggleGoalFormButton"),
+  goalForm: document.querySelector("#goalForm"),
+  goalNameInput: document.querySelector("#goalNameInput"),
+  goalCurrentInput: document.querySelector("#goalCurrentInput"),
+  goalTargetInput: document.querySelector("#goalTargetInput"),
+  cancelGoalButton: document.querySelector("#cancelGoalButton"),
   profileForm: document.querySelector("#profileForm"),
   profileNameInput: document.querySelector("#profileNameInput"),
   profileEmailInput: document.querySelector("#profileEmailInput"),
@@ -195,6 +201,7 @@ function loadState() {
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
+      goalFormOpen: false,
       budgetFormOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
@@ -239,6 +246,7 @@ function loadState() {
       selectedRole: parsed.selectedRole || "viewer",
       selectedCurrency: currencyConfig[parsed.selectedCurrency] ? parsed.selectedCurrency : "USD",
       formOpen: false,
+      goalFormOpen: false,
       budgetFormOpen: false,
       editingId: null,
       filters: {
@@ -270,6 +278,7 @@ function loadState() {
       selectedRole: "viewer",
       selectedCurrency: "USD",
       formOpen: false,
+      goalFormOpen: false,
       budgetFormOpen: false,
       editingId: null,
       filters: { search: "", type: "all", category: "all", sort: "date-desc" },
@@ -628,6 +637,47 @@ function attachEvents() {
     render();
   });
 
+  elements.toggleGoalFormButton.addEventListener("click", () => {
+    if (state.selectedRole !== "admin") return;
+    state.goalFormOpen = !state.goalFormOpen;
+    if (!state.goalFormOpen) {
+      elements.goalForm.reset();
+    }
+    render();
+  });
+
+  elements.cancelGoalButton.addEventListener("click", () => {
+    state.goalFormOpen = false;
+    elements.goalForm.reset();
+    render();
+  });
+
+  elements.goalForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (state.selectedRole !== "admin") return;
+
+    const label = elements.goalNameInput.value.trim();
+    const current = Number(elements.goalCurrentInput.value || 0);
+    const target = Number(elements.goalTargetInput.value || 0);
+
+    if (!label || !Number.isFinite(current) || !Number.isFinite(target) || current < 0 || target <= 0) {
+      return;
+    }
+
+    const goals = getActiveGoals();
+    const goalId = `goal-${Date.now()}`;
+    goals[goalId] = {
+      label,
+      current: convertToBaseCurrency(current, state.selectedCurrency),
+      target: convertToBaseCurrency(target, state.selectedCurrency),
+    };
+    getActiveUser().goals = goals;
+    state.goalFormOpen = false;
+    elements.goalForm.reset();
+    persistState();
+    render();
+  });
+
   elements.profileForm.addEventListener("submit", (event) => {
     event.preventDefault();
 
@@ -730,10 +780,15 @@ function renderAppShell() {
 
 function renderGoals() {
   const goals = Object.values(getActiveGoals());
+  const adminMode = state.selectedRole === "admin";
+  elements.goalForm.classList.toggle("hidden", !adminMode || !state.goalFormOpen);
+  elements.toggleGoalFormButton.disabled = !adminMode;
+  elements.toggleGoalFormButton.textContent = state.goalFormOpen ? "Hide form" : "Add goal";
+
   if (!goals.length) {
     elements.goalsSummary.innerHTML = renderEmptyState(
       "No goals set yet",
-      state.selectedRole === "admin"
+      adminMode
         ? "Add real financial goals before tracking progress here."
         : "Switch to admin mode when you want to create financial goals.",
     );
@@ -766,7 +821,7 @@ function renderGoals() {
   `;
 
   elements.goalsGrid.innerHTML = goals
-    .map((goal) => {
+    .map((goal, index) => {
       const progress = goal.target ? Math.min(100, Math.round((goal.current / goal.target) * 100)) : 0;
       return `
         <article class="goal-card">
@@ -777,10 +832,27 @@ function renderGoals() {
             <div class="budget-fill ${progress > 80 ? "healthy" : "watch"}" style="width:${progress}%"></div>
           </div>
           <small>${progress}% funded</small>
+          <div class="row-actions">
+            <button
+              type="button"
+              class="table-action danger-action"
+              data-goal-index="${index}"
+              ${adminMode ? "" : "disabled"}
+            >
+              Delete
+            </button>
+          </div>
         </article>
       `;
     })
     .join("");
+
+  elements.goalsGrid.querySelectorAll("[data-goal-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!adminMode) return;
+      removeGoal(Number(button.dataset.goalIndex));
+    });
+  });
 }
 
 function renderProfile() {
@@ -1589,6 +1661,24 @@ function closeBudgetForm() {
   state.budgetFormOpen = false;
 }
 
+function removeGoal(goalIndex) {
+  if (state.selectedRole !== "admin") return;
+
+  const goalEntries = Object.entries(getActiveGoals());
+  const goalEntry = goalEntries[goalIndex];
+  if (!goalEntry) return;
+
+  const [goalId, goal] = goalEntry;
+  const confirmed = window.confirm(`Delete "${goal.label}"?`);
+  if (!confirmed) return;
+
+  const goals = { ...getActiveGoals() };
+  delete goals[goalId];
+  getActiveUser().goals = goals;
+  persistState();
+  render();
+}
+
 async function importTransactionsFromFile(file) {
   if (state.selectedRole !== "admin") {
     setImportStatus("Switch to admin mode to import transactions.", "error");
@@ -2173,7 +2263,7 @@ function sanitizeProfile(profile, fallbackName, fallbackEmail) {
 
 function sanitizeGoals(goals) {
   const safeGoals = goals && typeof goals === "object" ? goals : {};
-  if (isLegacyDemoGoals(safeGoals)) {
+  if (isLegacyDemoGoals(safeGoals) || isLegacyGoalLabelsOnly(safeGoals)) {
     return {};
   }
 
@@ -2217,6 +2307,17 @@ function isLegacyDemoGoals(goals) {
       && Number(goal?.current) === oldGoal.current
       && Number(goal?.target) === oldGoal.target;
   });
+}
+
+function isLegacyGoalLabelsOnly(goals) {
+  const labels = Object.values(goals || {})
+    .map((goal) => String(goal?.label || "").toLowerCase())
+    .sort();
+
+  return labels.length === 3
+    && labels[0] === "emergency fund"
+    && labels[1] === "gadget upgrade"
+    && labels[2] === "travel fund";
 }
 
 function sanitizeUserSettings(settings) {

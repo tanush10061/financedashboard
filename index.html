@@ -318,7 +318,32 @@
                 <p class="panel-kicker">Planning</p>
                 <h2 id="goalsSummaryHeading">Savings goals</h2>
               </div>
+              <div class="transactions-actions">
+                <button id="toggleGoalFormButton" class="ghost-button" type="button">
+                  Add goal
+                </button>
+              </div>
             </div>
+            <form id="goalForm" class="transaction-form hidden">
+              <div class="form-grid">
+                <label>
+                  <span>Goal name</span>
+                  <input id="goalNameInput" type="text" placeholder="Emergency fund" />
+                </label>
+                <label>
+                  <span>Current saved</span>
+                  <input id="goalCurrentInput" type="number" min="0" step="0.01" />
+                </label>
+                <label>
+                  <span>Target amount</span>
+                  <input id="goalTargetInput" type="number" min="0" step="0.01" />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary-button">Save goal</button>
+                <button type="button" id="cancelGoalButton" class="ghost-button">Cancel</button>
+              </div>
+            </form>
             <div id="goalsSummary" class="metrics-grid"></div>
           </section>
 
