@@ -64,10 +64,7 @@ const elements = {
   authScreen: document.querySelector("#authScreen"),
   dashboardApp: document.querySelector("#dashboardApp"),
   authCreateForm: document.querySelector("#authCreateForm"),
-  existingUserSelect: document.querySelector("#existingUserSelect"),
-  continueUserButton: document.querySelector("#continueUserButton"),
   authStatus: document.querySelector("#authStatus"),
-  userSelect: document.querySelector("#userSelect"),
   userNameInput: document.querySelector("#userNameInput"),
   userEmailInput: document.querySelector("#userEmailInput"),
   addUserButton: document.querySelector("#addUserButton"),
@@ -268,37 +265,33 @@ function populateCategoryOptions() {
 }
 
 function attachEvents() {
-  elements.userSelect.addEventListener("change", (event) => {
-    state.currentUserId = event.target.value;
-    state.editingId = null;
-    state.formOpen = false;
-    state.budgetFormOpen = false;
-    persistState();
-    render();
-  });
-
   elements.authCreateForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = elements.userNameInput.value.trim();
     const email = elements.userEmailInput.value.trim().toLowerCase();
 
     if (!name || !email) {
-      setAuthStatus("Enter both a username and email to create an account.", "error");
+      setAuthStatus("Enter both a username and email to continue.", "error");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setAuthStatus("Enter a valid email address to create the account.", "error");
+      setAuthStatus("Enter a valid email address to continue.", "error");
       return;
     }
 
-    if (state.users.some((user) => user.email.toLowerCase() === email)) {
-      setAuthStatus("That email already exists. Use the existing account option below.", "error");
+    let user = state.users.find((entry) => entry.email.toLowerCase() === email);
+
+    if (user && user.name.toLowerCase() !== name.toLowerCase()) {
+      setAuthStatus("That email belongs to another username. Enter the correct username to continue.", "error");
       return;
     }
 
-    const user = createUserProfile(name, email, []);
-    state.users.push(user);
+    if (!user) {
+      user = createUserProfile(name, email, []);
+      state.users.push(user);
+    }
+
     state.currentUserId = user.id;
     state.isAuthenticated = true;
     state.editingId = null;
@@ -308,22 +301,12 @@ function attachEvents() {
     elements.userEmailInput.value = "";
     persistState();
     render();
-  });
-
-  elements.continueUserButton.addEventListener("click", () => {
-    const userId = elements.existingUserSelect.value;
-    if (!userId) {
-      setAuthStatus("Select an existing account to continue.", "error");
-      return;
-    }
-
-    state.currentUserId = userId;
-    state.isAuthenticated = true;
-    state.editingId = null;
-    state.formOpen = false;
-    state.budgetFormOpen = false;
-    persistState();
-    render();
+    setAuthStatus(
+      user.transactions.length || Object.keys(user.budgets || {}).length
+        ? `Welcome back, ${user.name}.`
+        : `Account created for ${user.name}.`,
+      "success",
+    );
   });
 
   elements.signOutButton.addEventListener("click", () => {
@@ -333,7 +316,7 @@ function attachEvents() {
     state.budgetFormOpen = false;
     persistState();
     render();
-    setAuthStatus("Signed out. Create an account or continue with an existing one.", "success");
+    setAuthStatus("Signed out. Enter your details to continue.", "success");
   });
 
   elements.roleSelect.addEventListener("change", (event) => {
@@ -500,14 +483,6 @@ function render() {
   const activeUser = getActiveUser();
   const transactions = getActiveTransactions();
 
-  elements.existingUserSelect.innerHTML = state.users
-    .map((user) => `<option value="${user.id}">${user.name} (${user.email})</option>`)
-    .join("");
-  elements.userSelect.innerHTML = state.users
-    .map((user) => `<option value="${user.id}">${user.name} (${user.email})</option>`)
-    .join("");
-  elements.existingUserSelect.value = activeUser.id;
-  elements.userSelect.value = activeUser.id;
   elements.activeUserLabel.textContent = activeUser.name;
   elements.activeUserEmail.textContent = activeUser.email;
   elements.authScreen.classList.toggle("hidden", state.isAuthenticated);
