@@ -47,11 +47,7 @@ function cloneTransactions(transactions) {
 }
 
 function createDefaultGoals() {
-  return {
-    emergencyFund: { label: "Emergency fund", current: 1800, target: 5000 },
-    travelFund: { label: "Travel fund", current: 650, target: 2200 },
-    gadgetUpgrade: { label: "Gadget upgrade", current: 1200, target: 1800 },
-  };
+  return {};
 }
 
 function createDefaultSettings() {
@@ -667,28 +663,7 @@ function attachEvents() {
   });
 
   elements.exportDataButton.addEventListener("click", () => {
-    const user = getActiveUser();
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      user: {
-        name: user.name,
-        email: user.email,
-        profile: user.profile,
-        settings: user.settings,
-      },
-      budgets: user.budgets,
-      goals: user.goals,
-      transactions: user.transactions,
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${user.name.toLowerCase().replace(/\s+/g, "-")}-pulseledger-export.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setPanelStatus(elements.settingsStatus, "Data export downloaded.", "success");
+    exportPdfReport();
   });
 }
 
@@ -755,6 +730,20 @@ function renderAppShell() {
 
 function renderGoals() {
   const goals = Object.values(getActiveGoals());
+  if (!goals.length) {
+    elements.goalsSummary.innerHTML = renderEmptyState(
+      "No goals set yet",
+      state.selectedRole === "admin"
+        ? "Add real financial goals before tracking progress here."
+        : "Switch to admin mode when you want to create financial goals.",
+    );
+    elements.goalsGrid.innerHTML = renderEmptyState(
+      "Goal tracker is empty",
+      "This section will show real user-defined goals instead of demo values.",
+    );
+    return;
+  }
+
   const totalCurrent = goals.reduce((sum, goal) => sum + goal.current, 0);
   const totalTarget = goals.reduce((sum, goal) => sum + goal.target, 0);
 
@@ -808,6 +797,225 @@ function renderSettings() {
   elements.notificationsToggle.checked = Boolean(settings.notifications);
   elements.weeklyDigestToggle.checked = Boolean(settings.weeklyDigest);
   elements.spendingAlertsToggle.checked = Boolean(settings.spendingAlerts);
+}
+
+function exportPdfReport() {
+  const user = getActiveUser();
+  const transactions = getActiveTransactions();
+  const summary = getSummary(transactions);
+  const insights = getInsights(transactions);
+  const budgets = getBudgetStatus(transactions, getActiveBudgets());
+  const goals = Object.values(getActiveGoals());
+  const recentTransactions = getFilteredTransactions().slice(0, 12);
+  const profile = getActiveProfile();
+
+  const reportWindow = window.open("", "_blank", "width=960,height=900");
+  if (!reportWindow) {
+    setPanelStatus(elements.settingsStatus, "Pop-up blocked. Allow pop-ups to export the PDF report.", "error");
+    return;
+  }
+
+  const reportHtml = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PulseLedger Report</title>
+        <style>
+          body {
+            margin: 0;
+            padding: 32px;
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            color: #1e2523;
+            background: #f7f1e7;
+          }
+          .report-shell {
+            max-width: 980px;
+            margin: 0 auto;
+          }
+          .report-hero {
+            padding: 28px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #12302b, #1e5f52);
+            color: #fffaf3;
+            margin-bottom: 22px;
+          }
+          .report-hero h1 {
+            margin: 0 0 10px;
+            font-size: 36px;
+          }
+          .report-hero p {
+            margin: 4px 0;
+            color: rgba(255, 250, 243, 0.82);
+          }
+          .report-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+          }
+          .card, .section {
+            background: rgba(255, 255, 255, 0.88);
+            border-radius: 20px;
+            padding: 18px;
+            box-shadow: 0 10px 24px rgba(79, 60, 41, 0.08);
+          }
+          .card p, .section p {
+            margin: 0 0 8px;
+            color: #61706b;
+            font-size: 14px;
+          }
+          .card strong {
+            font-size: 28px;
+          }
+          .section {
+            margin-bottom: 18px;
+          }
+          .section h2 {
+            margin: 0 0 14px;
+            font-size: 22px;
+          }
+          .list, .table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .list li {
+            margin-bottom: 8px;
+          }
+          .table th, .table td {
+            text-align: left;
+            padding: 10px 0;
+            border-bottom: 1px solid #e8e1d6;
+            font-size: 14px;
+          }
+          .two-col {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+          }
+          .muted {
+            color: #61706b;
+          }
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+            }
+            .report-shell {
+              max-width: none;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="report-shell">
+          <section class="report-hero">
+            <h1>PulseLedger Financial Report</h1>
+            <p>${escapeHtml(user.name)} • ${escapeHtml(user.email)}</p>
+            <p>Exported on ${escapeHtml(new Date().toLocaleString("en-IN"))}</p>
+            <p>${escapeHtml(profile.occupation || "Profile")} • ${escapeHtml(profile.city || "No city added")}</p>
+          </section>
+
+          <section class="report-grid">
+            <article class="card">
+              <p>Total balance</p>
+              <strong>${escapeHtml(formatCurrency(summary.balance))}</strong>
+            </article>
+            <article class="card">
+              <p>Total income</p>
+              <strong>${escapeHtml(formatCurrency(summary.income))}</strong>
+            </article>
+            <article class="card">
+              <p>Total expenses</p>
+              <strong>${escapeHtml(formatCurrency(summary.expenses))}</strong>
+            </article>
+          </section>
+
+          <div class="two-col">
+            <section class="section">
+              <h2>Key insights</h2>
+              <ul class="list">
+                ${insights.map((item) => `<li><strong>${escapeHtml(item.title)}:</strong> ${escapeHtml(item.value)} <span class="muted">(${escapeHtml(item.detail)})</span></li>`).join("")}
+              </ul>
+            </section>
+            <section class="section">
+              <h2>Goals</h2>
+              ${goals.length
+                ? `<ul class="list">
+                    ${goals.map((goal) => `<li><strong>${escapeHtml(goal.label)}:</strong> ${escapeHtml(formatCurrency(goal.current))} of ${escapeHtml(formatCurrency(goal.target))}</li>`).join("")}
+                  </ul>`
+                : `<p class="muted">No financial goals have been created yet.</p>`}
+            </section>
+          </div>
+
+          <div class="two-col">
+            <section class="section">
+              <h2>Budget status</h2>
+              ${budgets.length ? `
+                <table class="table">
+                  <thead>
+                    <tr><th>Category</th><th>Spent</th><th>Budget</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    ${budgets.map((item) => `
+                      <tr>
+                        <td>${escapeHtml(item.category)}</td>
+                        <td>${escapeHtml(formatCurrency(item.spent))}</td>
+                        <td>${escapeHtml(formatCurrency(item.budget))}</td>
+                        <td>${escapeHtml(item.status)}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              ` : `<p class="muted">No budgets set.</p>`}
+            </section>
+            <section class="section">
+              <h2>Profile snapshot</h2>
+              <table class="table">
+                <tbody>
+                  <tr><th>Full name</th><td>${escapeHtml(profile.fullName || user.name)}</td></tr>
+                  <tr><th>Email</th><td>${escapeHtml(profile.email || user.email)}</td></tr>
+                  <tr><th>Monthly income</th><td>${escapeHtml(formatCurrency(profile.monthlyIncome || 0))}</td></tr>
+                  <tr><th>Occupation</th><td>${escapeHtml(profile.occupation || "-")}</td></tr>
+                  <tr><th>City</th><td>${escapeHtml(profile.city || "-")}</td></tr>
+                </tbody>
+              </table>
+            </section>
+          </div>
+
+          <section class="section">
+            <h2>Recent transactions</h2>
+            ${recentTransactions.length ? `
+              <table class="table">
+                <thead>
+                  <tr><th>Description</th><th>Date</th><th>Category</th><th>Type</th><th>Amount</th></tr>
+                </thead>
+                <tbody>
+                  ${recentTransactions.map((item) => `
+                    <tr>
+                      <td>${escapeHtml(item.description)}</td>
+                      <td>${escapeHtml(formatDate(item.date))}</td>
+                      <td>${escapeHtml(item.category)}</td>
+                      <td>${escapeHtml(capitalize(item.type))}</td>
+                      <td>${escapeHtml(formatCurrency(item.amount))}</td>
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            ` : `<p class="muted">No transactions available.</p>`}
+          </section>
+        </div>
+      </body>
+    </html>
+  `;
+
+  reportWindow.document.open();
+  reportWindow.document.write(reportHtml);
+  reportWindow.document.close();
+  reportWindow.focus();
+  reportWindow.print();
+  setPanelStatus(elements.settingsStatus, "PDF report opened. Save it as PDF from the print dialog.", "success");
 }
 
 function validateAuthFields(name, email) {
@@ -1256,6 +1464,19 @@ function renderRoleUI() {
       </label>
     `)
     .join("");
+
+  elements.profileForm.querySelectorAll("input, button[type='submit']").forEach((element) => {
+    element.disabled = !adminMode;
+    if (element.tagName === "INPUT") {
+      element.readOnly = !adminMode;
+    }
+  });
+
+  elements.settingsForm.querySelectorAll("input, button[type='submit']").forEach((element) => {
+    element.disabled = !adminMode;
+  });
+
+  elements.exportDataButton.disabled = false;
 }
 
 function renderTransactions(transactions) {
@@ -1907,6 +2128,15 @@ function capitalize(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function renderEmptyState(title, detail) {
   return `
     <div class="empty-state">
@@ -1943,17 +2173,50 @@ function sanitizeProfile(profile, fallbackName, fallbackEmail) {
 
 function sanitizeGoals(goals) {
   const safeGoals = goals && typeof goals === "object" ? goals : {};
-  const defaults = createDefaultGoals();
+  if (isLegacyDemoGoals(safeGoals)) {
+    return {};
+  }
 
-  return Object.entries(defaults).reduce((accumulator, [key, goal]) => {
-    const savedGoal = safeGoals[key] || {};
+  return Object.entries(safeGoals).reduce((accumulator, [key, goal]) => {
+    if (!goal || typeof goal !== "object") {
+      return accumulator;
+    }
+
+    const current = Number(goal.current);
+    const target = Number(goal.target);
+    if (!goal.label || !Number.isFinite(current) || !Number.isFinite(target) || current < 0 || target <= 0) {
+      return accumulator;
+    }
+
     accumulator[key] = {
-      label: savedGoal.label || goal.label,
-      current: Number.isFinite(Number(savedGoal.current)) ? Number(savedGoal.current) : goal.current,
-      target: Number.isFinite(Number(savedGoal.target)) ? Number(savedGoal.target) : goal.target,
+      label: goal.label,
+      current,
+      target,
     };
     return accumulator;
   }, {});
+}
+
+function isLegacyDemoGoals(goals) {
+  const keys = Object.keys(goals || {}).sort();
+  if (keys.length !== 3) {
+    return false;
+  }
+
+  const legacy = {
+    emergencyFund: { label: "Emergency fund", current: 1800, target: 5000 },
+    gadgetUpgrade: { label: "Gadget upgrade", current: 1200, target: 1800 },
+    travelFund: { label: "Travel fund", current: 650, target: 2200 },
+  };
+
+  return keys.every((key) => {
+    const goal = goals[key];
+    const oldGoal = legacy[key];
+    return oldGoal
+      && goal?.label === oldGoal.label
+      && Number(goal?.current) === oldGoal.current
+      && Number(goal?.target) === oldGoal.target;
+  });
 }
 
 function sanitizeUserSettings(settings) {

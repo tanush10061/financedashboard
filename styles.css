@@ -865,7 +865,9 @@ input:focus {
 
 .primary-button:disabled,
 .table-action:disabled,
-.ghost-button:disabled {
+.ghost-button:disabled,
+input:disabled,
+select:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
