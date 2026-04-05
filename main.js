@@ -65,12 +65,17 @@ state.chartFocus = {
   categoryHoverIndex: null,
   categoryPinnedIndex: null,
 };
+state.authMode = "login";
 
 const elements = {
   authScreen: document.querySelector("#authScreen"),
   dashboardApp: document.querySelector("#dashboardApp"),
   authCreateForm: document.querySelector("#authCreateForm"),
+  authTitle: document.querySelector("#authTitle"),
+  authSubtitle: document.querySelector("#authSubtitle"),
   authStatus: document.querySelector("#authStatus"),
+  loginModeButton: document.querySelector("#loginModeButton"),
+  signupModeButton: document.querySelector("#signupModeButton"),
   userNameInput: document.querySelector("#userNameInput"),
   userEmailInput: document.querySelector("#userEmailInput"),
   addUserButton: document.querySelector("#addUserButton"),
@@ -272,6 +277,18 @@ function populateCategoryOptions() {
 }
 
 function attachEvents() {
+  elements.loginModeButton.addEventListener("click", () => {
+    state.authMode = "login";
+    setAuthStatus("", "");
+    render();
+  });
+
+  elements.signupModeButton.addEventListener("click", () => {
+    state.authMode = "signup";
+    setAuthStatus("", "");
+    render();
+  });
+
   elements.authCreateForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = elements.userNameInput.value.trim();
@@ -287,19 +304,29 @@ function attachEvents() {
       return;
     }
 
-    let user = state.users.find((entry) => entry.email.toLowerCase() === email);
+    const user = state.users.find((entry) => entry.email.toLowerCase() === email);
 
-    if (user && user.name.toLowerCase() !== name.toLowerCase()) {
-      setAuthStatus("That email belongs to another username. Enter the correct username to continue.", "error");
-      return;
+    if (state.authMode === "login") {
+      if (!user || user.name.toLowerCase() !== name.toLowerCase()) {
+        setAuthStatus("Authentication failed. Check your username and email, or create a new account.", "error");
+        return;
+      }
+    } else {
+      if (user) {
+        setAuthStatus("An account with that email already exists. Use Log in instead.", "error");
+        return;
+      }
     }
 
-    if (!user) {
-      user = createUserProfile(name, email, []);
-      state.users.push(user);
+    const activeUser = state.authMode === "signup"
+      ? createUserProfile(name, email, [])
+      : user;
+
+    if (state.authMode === "signup") {
+      state.users.push(activeUser);
     }
 
-    state.currentUserId = user.id;
+    state.currentUserId = activeUser.id;
     state.isAuthenticated = true;
     state.editingId = null;
     state.formOpen = false;
@@ -309,9 +336,9 @@ function attachEvents() {
     persistState();
     render();
     setAuthStatus(
-      user.transactions.length || Object.keys(user.budgets || {}).length
-        ? `Welcome back, ${user.name}.`
-        : `Account created for ${user.name}.`,
+      state.authMode === "signup"
+        ? `Account created for ${activeUser.name}.`
+        : `Welcome back, ${activeUser.name}.`,
       "success",
     );
   });
@@ -494,6 +521,7 @@ function render() {
 
   elements.activeUserLabel.textContent = activeUser.name;
   elements.activeUserEmail.textContent = activeUser.email;
+  renderAuthMode();
   elements.authScreen.classList.toggle("hidden", state.isAuthenticated);
   elements.dashboardApp.classList.toggle("hidden", !state.isAuthenticated);
   elements.roleSelect.value = state.selectedRole;
@@ -518,6 +546,17 @@ function render() {
   renderActivitySnapshot(transactions);
   renderRoleUI();
   renderTransactions(filteredTransactions);
+}
+
+function renderAuthMode() {
+  const loginMode = state.authMode === "login";
+  elements.loginModeButton.classList.toggle("is-active", loginMode);
+  elements.signupModeButton.classList.toggle("is-active", !loginMode);
+  elements.authTitle.textContent = loginMode ? "Log in to PulseLedger" : "Create your PulseLedger account";
+  elements.authSubtitle.textContent = loginMode
+    ? "Enter your username and email to open your personal finance workspace."
+    : "New here? Create an account with your username and email to start your workspace.";
+  elements.addUserButton.textContent = loginMode ? "Log in" : "Create account";
 }
 
 function renderSummary(summary) {
