@@ -446,7 +446,7 @@ input:focus {
   font-size: 11px;
   fill: rgba(30, 37, 35, 0.45);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
 }
 
 .donut-total-value {

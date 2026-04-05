@@ -646,6 +646,7 @@ function renderCategoryChart(categoryTotals) {
   const total = categoryTotals.reduce((sum, item) => sum + item.amount, 0);
   const activeIndex = getActiveCategoryIndex(categoryTotals.length);
   const activeCategory = categoryTotals[activeIndex];
+  const labelFontSize = getDonutLabelFontSize(activeCategory.category);
   let offset = 0;
 
   const segments = categoryTotals
@@ -678,9 +679,17 @@ function renderCategoryChart(categoryTotals) {
         <g transform="rotate(-90 80 80)">
           ${segments}
         </g>
-        <text x="80" y="70" text-anchor="middle" class="donut-total-label">${activeCategory.category}</text>
-        <text x="80" y="92" text-anchor="middle" class="donut-total-value">${formatCompactCurrency(activeCategory.amount)}</text>
-        <text x="80" y="111" text-anchor="middle" class="donut-share-label">${Math.round((activeCategory.amount / total) * 100)}% of spending</text>
+        <text
+          x="80"
+          y="66"
+          text-anchor="middle"
+          textLength="66"
+          lengthAdjust="spacingAndGlyphs"
+          class="donut-total-label"
+          style="font-size:${labelFontSize}px"
+        >${activeCategory.category}</text>
+        <text x="80" y="91" text-anchor="middle" class="donut-total-value">${formatCompactCurrency(activeCategory.amount)}</text>
+        <text x="80" y="110" text-anchor="middle" class="donut-share-label">${Math.round((activeCategory.amount / total) * 100)}% of spending</text>
       </svg>
       <div class="legend-list">
         ${categoryTotals
@@ -1522,6 +1531,14 @@ function getActiveCategoryIndex(totalCategories) {
     return state.chartFocus.categoryPinnedIndex;
   }
   return 0;
+}
+
+function getDonutLabelFontSize(label) {
+  const length = String(label || "").length;
+  if (length >= 12) return 7;
+  if (length >= 9) return 8.5;
+  if (length >= 7) return 9.5;
+  return 11;
 }
 
 function formatBudgetInputValue(value) {
